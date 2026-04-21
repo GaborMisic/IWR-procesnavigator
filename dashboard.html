@@ -8,7 +8,67 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+#map { height: 580px; width: 100%; border: 1px solid var(--line); background: #eef0e8; }
+.map-wrap { position: relative; }
+.map-btn {
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 8px 14px; font-family: var(--mono); font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.15s; color: var(--ink);
+  white-space: nowrap;
+}
+.map-btn:hover { background: var(--ink); color: white; }
+.map-layers {
+  position: absolute; top: 12px; left: 12px; z-index: 1000;
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: var(--mono); font-size: 11px; min-width: 200px;
+}
+.map-layers-title {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--mute); margin-bottom: 10px; font-size: 10px;
+}
+.layer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
+.layer-row input { cursor: pointer; accent-color: var(--signal); }
+.layer-row label { cursor: pointer; }
+.map-legend {
+  position: absolute; bottom: 24px; left: 12px; z-index: 1000;
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: var(--mono); font-size: 11px; min-width: 170px;
+}
+.map-legend-title {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--mute); margin-bottom: 10px; font-size: 10px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(0,0,0,0.15); }
+.map-toolbar {
+  display: flex; gap: 10px; align-items: center;
+  padding: 12px 0; flex-wrap: wrap; margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.upload-feedback {
+  padding: 8px 14px; font-family: var(--mono); font-size: 11px;
+  color: var(--green); background: #e3f4e8; border-radius: 2px; display: none;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 2px; border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.leaflet-popup-content { font-family: var(--mono); font-size: 12px; margin: 12px 16px; }
+.popup-name { font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 8px; color: var(--ink); }
+.popup-row { margin-bottom: 4px; }
+.popup-label { color: var(--mute); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.popup-val { color: var(--ink); font-weight: 500; }
+.info-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 20px; }
+.info-card { background: var(--paper-2); border: 1px solid var(--line); padding: 20px; }
+.info-card-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); margin-bottom: 8px; }
+</style>
 </head>
 <body class="dash-body">
 
@@ -42,463 +102,553 @@
   <button class="tab tab-active" data-tab="po">Projectoverzicht <span class="tab-count" id="c-po">—</span></button>
   <button class="tab" data-tab="dash">Dashboard Engineer <span class="tab-count" id="c-dash">—</span></button>
   <button class="tab" data-tab="showstoppers">Vertragingen <span class="tab-count" id="c-ss">—</span></button>
+  <button class="tab" data-tab="kaart">🗺 Tracékaart <span class="tab-count" id="c-kaart">—</span></button>
 </nav>
 
 <main class="dash-main">
   <div class="wrap">
 
-    <!-- PANEL: Projectoverzicht -->
+    <!-- Projectoverzicht -->
     <section id="panel-po" class="panel panel-active">
       <div id="po-grid" class="po-grid"></div>
     </section>
 
-    <!-- PANEL: Dashboard Engineer -->
+    <!-- Dashboard Engineer -->
     <section id="panel-dash" class="panel">
       <div class="ds-toolbar">
-        <select id="filter-project">
-          <option value="">Alle projecten</option>
-        </select>
-        <select id="filter-hcat">
-          <option value="">Alle hoofdcategorieën</option>
-        </select>
+        <select id="filter-project"><option value="">Alle projecten</option></select>
+        <select id="filter-hcat"><option value="">Alle hoofdcategorieën</option></select>
         <select id="filter-status">
           <option value="">Alle statussen</option>
-          <option>Nodig</option>
-          <option>Ingediend</option>
-          <option>Afgerond</option>
-          <option>Goedgekeurd</option>
-          <option>Afgewezen</option>
-          <option>N.v.t</option>
+          <option>Nodig</option><option>Ingediend</option><option>Afgerond</option>
+          <option>Goedgekeurd</option><option>Afgewezen</option><option>N.v.t</option>
         </select>
         <input type="search" id="filter-search" placeholder="Zoek in type…" style="min-width:200px">
         <div class="ds-count" id="ds-count">— rijen</div>
       </div>
-
       <div class="ds-table-wrap">
         <table class="ds-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Project</th>
-              <th>Hcat</th>
-              <th>Type</th>
-              <th>Route</th>
-              <th>Var</th>
-              <th class="c-num">Norm</th>
-              <th class="c-num">Buffer</th>
-              <th>Status</th>
-              <th>Uitgezet</th>
-              <th>Vereist gereed</th>
-              <th>Verwacht gereed</th>
-              <th>Impl. GSU</th>
-              <th class="c-num">Rest wd</th>
-              <th>Haalbaar</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th></th><th>Project</th><th>Hcat</th><th>Type</th>
+            <th>Route</th><th>Var</th><th class="c-num">Norm</th><th class="c-num">Buffer</th>
+            <th>Status</th><th>Uitgezet</th><th>Vereist gereed</th>
+            <th>Verwacht gereed</th><th>Impl. GSU</th>
+            <th class="c-num">Rest wd</th><th>Haalbaar</th>
+          </tr></thead>
           <tbody id="ds-body"></tbody>
         </table>
       </div>
     </section>
 
-    <!-- PANEL: Showstoppers -->
+    <!-- Vertragingen -->
     <section id="panel-showstoppers" class="panel">
       <div class="ds-table-wrap">
         <table class="ds-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Project</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Vereist gereed</th>
-              <th>Verwacht gereed</th>
-              <th>Slip (wd)</th>
-              <th>Haalbaar</th>
-              <th>Probleem</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th></th><th>Project</th><th>Type</th><th>Status</th>
+            <th>Vereist gereed</th><th>Verwacht gereed</th>
+            <th>Slip (wd)</th><th>Haalbaar</th><th>Probleem</th>
+          </tr></thead>
           <tbody id="ss-body"></tbody>
         </table>
       </div>
     </section>
 
+    <!-- Tracékaart -->
+    <section id="panel-kaart" class="panel">
+
+      <div class="map-toolbar">
+        <span class="tb-label">Lagen toevoegen:</span>
+        <label class="map-btn" style="cursor:pointer">
+          📐 DXF / GeoJSON tracé
+          <input type="file" accept=".dxf,.geojson,.json,.kml" style="display:none" onchange="loadTraceFile(event)">
+        </label>
+        <label class="map-btn" style="cursor:pointer">
+          🏗 BDOK export
+          <input type="file" accept=".geojson,.json" style="display:none" onchange="loadBdokFile(event)">
+        </label>
+        <label class="map-btn" style="cursor:pointer">
+          🔌 Stedin liggingsdata
+          <input type="file" accept=".geojson,.json" style="display:none" onchange="loadStedinFile(event)">
+        </label>
+        <button class="map-btn" onclick="clearUploadedLayers()">✕ Lagen wissen</button>
+        <div class="upload-feedback" id="uploadFeedback">✓ Geladen</div>
+        <div style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--mute)">
+          Achtergrond: OpenStreetMap · BGT via PDOK · Gratis &amp; open
+        </div>
+      </div>
+
+      <div class="map-wrap">
+        <div id="map"></div>
+
+        <div class="map-layers">
+          <div class="map-layers-title">Achtergrondkaart</div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-osm" value="osm" checked onchange="switchBasemap(this.value)"><label for="bm-osm">OpenStreetMap</label></div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-lufo" value="lufo" onchange="switchBasemap(this.value)"><label for="bm-lufo">Luchtfoto (PDOK)</label></div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-bgt" value="bgt" onchange="switchBasemap(this.value)"><label for="bm-bgt">BGT topografie (PDOK)</label></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:10px 0">
+          <div class="map-layers-title">Overlays</div>
+          <div class="layer-row"><input type="checkbox" id="lyr-proj" checked onchange="toggleLayer('projects', this.checked)"><label for="lyr-proj">Projectlocaties</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-trace" checked onchange="toggleLayer('trace', this.checked)"><label for="lyr-trace">Tracé</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-bdok" checked onchange="toggleLayer('bdok', this.checked)"><label for="lyr-bdok">BDOK bodemdata</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-stedin" checked onchange="toggleLayer('stedin', this.checked)"><label for="lyr-stedin">Stedin leidingen</label></div>
+        </div>
+
+        <div class="map-legend">
+          <div class="map-legend-title">Projectstatus</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#2d8a4e"></div><span>Op koers</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#d68910"></div><span>Krap / let op</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#c0392b"></div><span>Slip &gt;5 wk</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#6a748a"></div><span>Onbekend</span></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+          <div class="legend-row"><div style="width:16px;height:3px;background:#2E75B6;flex-shrink:0;margin:4px 0"></div><span>Tracé</span></div>
+          <div class="legend-row"><div style="width:16px;height:3px;background:#d9651e;flex-shrink:0;margin:4px 0"></div><span>BDOK</span></div>
+          <div class="legend-row"><div style="width:16px;height:3px;background:#e74c3c;flex-shrink:0;margin:4px 0"></div><span>Stedin</span></div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">DXF / GeoJSON tracé</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Exporteer vanuit AutoCAD als <strong>DXF</strong> of converteer naar GeoJSON. Tracé verschijnt als blauwe lijn. RD New coördinaten worden automatisch omgezet naar WGS84.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">BDOK bodemdata</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Exporteer GeoJSON vanuit <strong>bdok.nl</strong> voor bodemkwaliteit, verontreiniging, archeologie en explosieven. Laadt als oranje laag met klikbare properties.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Stedin liggingsdata</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Download gratis SHP van <strong>stedin.net/zakelijk/open-data</strong>. Converteer naar GeoJSON via <strong>mapshaper.org</strong> (gratis, geen account nodig).</p>
+        </div>
+      </div>
+
+    </section>
   </div>
 </main>
 
 <script>
-// =========================================================
-// IWR Procesnavigator — Dashboard logic
-// =========================================================
-
+// ============================================================
 let DATA = null;
-const TODAY = new Date();
+let MAP  = null;
+let LAYERS = {};
+let BASEMAPS = {};
 
-// ---------- LOADERS ----------
+const KNOWN_COORDS = {
+  'IRN24-0175': [51.8133, 4.6901],
+};
+const CITY_COORDS = {
+  'Rotterdam':             [51.9225, 4.4792],
+  'Dordrecht':             [51.8133, 4.6693],
+  'Capelle a/d IJssel':    [51.9333, 4.5833],
+  'Capelle aan den IJssel':[51.9333, 4.5833],
+  'Schiedam':              [51.9167, 4.4000],
+  'Vlaardingen':           [51.9128, 4.3425],
+  'Ridderkerk':            [51.8667, 4.6000],
+  'Barendrecht':           [51.8589, 4.5342],
+  'Spijkenisse':           [51.8500, 4.3333],
+};
+
+// ---------- MAP INIT ----------
+function initMap() {
+  if (MAP) return;
+  MAP = L.map('map', { zoomControl: true }).setView([51.88, 4.55], 11);
+
+  BASEMAPS.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19
+  }).addTo(MAP);
+
+  BASEMAPS.lufo = L.tileLayer(
+    'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho25/EPSG:3857/{z}/{x}/{y}.jpeg',
+    { attribution: '© PDOK Luchtfoto', maxZoom: 19 }
+  );
+
+  BASEMAPS.bgt = L.tileLayer.wms(
+    'https://service.pdok.nl/brt/achtergrondkaart/wms/v2_0',
+    { layers: 'standaard', format: 'image/png', transparent: true, attribution: '© PDOK BGT', maxZoom: 19 }
+  );
+
+  LAYERS.projects = L.layerGroup().addTo(MAP);
+  LAYERS.trace    = L.layerGroup().addTo(MAP);
+  LAYERS.bdok     = L.layerGroup().addTo(MAP);
+  LAYERS.stedin   = L.layerGroup().addTo(MAP);
+}
+
+function switchBasemap(val) {
+  Object.values(BASEMAPS).forEach(b => { try { MAP.removeLayer(b); } catch(e){} });
+  BASEMAPS[val].addTo(MAP);
+}
+
+function toggleLayer(name, on) {
+  if (!LAYERS[name]) return;
+  on ? MAP.addLayer(LAYERS[name]) : MAP.removeLayer(LAYERS[name]);
+}
+
+// ---------- PROJECT MARKERS ----------
+function statusColor(delta) {
+  if (delta === null) return '#6a748a';
+  if (delta <= 0)  return '#2d8a4e';
+  if (delta <= 10) return '#d68910';
+  return '#c0392b';
+}
+
+function renderProjectMarkers() {
+  if (!MAP || !LAYERS.projects) return;
+  LAYERS.projects.clearLayers();
+  const projs = (DATA && DATA.projects) || [];
+  document.getElementById('c-kaart').textContent = projs.length;
+
+  const bounds = [];
+  projs.forEach(p => {
+    let coords = KNOWN_COORDS[p.ProjectID] || CITY_COORDS[p.Plaats] || [51.9, 4.5];
+    bounds.push(coords);
+
+    const items = (DATA.dashboard || []).filter(d => d.ProjectID === p.ProjectID);
+    let maxImpl = null;
+    items.forEach(i => {
+      const v = parseDate(i.Geimpliceerde_GSU);
+      if (v && (!maxImpl || v > maxImpl)) maxImpl = v;
+    });
+    const gsuOrig = parseDate(p.GSU_Datum);
+    let delta = (gsuOrig && maxImpl) ? workdaysBetween(gsuOrig, maxImpl) : null;
+
+    const color = statusColor(delta);
+    const slabel = delta === null ? 'Onbekend' : delta <= 0 ? '✓ Op koers' : delta <= 10 ? '⚠ Krap' : '🔴 Slip';
+    const deltaText = delta !== null
+      ? `<div class="popup-row"><span class="popup-label">Delta GSU</span><br><span class="popup-val">${delta >= 0 ? '+' : ''}${delta} werkdagen</span></div>` : '';
+
+    L.circleMarker(coords, {
+      radius: 13, fillColor: color, color: 'white', weight: 2.5, opacity: 1, fillOpacity: 0.92
+    })
+    .bindPopup(`
+      <div class="popup-name">${escapeHtml(p.Projectnaam||'—')}</div>
+      <div class="popup-row"><span class="popup-label">ProjectID</span><br><span class="popup-val">${escapeHtml(p.ProjectID||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">Route · Variant</span><br><span class="popup-val">${escapeHtml(p.Route||'')} · ${escapeHtml(p.Variant||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">Plaats</span><br><span class="popup-val">${escapeHtml(p.Plaats||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">GSU origineel</span><br><span class="popup-val">${fmtDate(gsuOrig)}</span></div>
+      <div class="popup-row"><span class="popup-label">GSU verwacht</span><br><span class="popup-val">${fmtDate(maxImpl)}</span></div>
+      ${deltaText}
+      <div class="popup-row" style="margin-top:8px;font-size:14px">${slabel}</div>
+    `, { maxWidth: 280 })
+    .bindTooltip(`<strong>${p.Projectnaam}</strong><br>${slabel}`, { direction: 'top', offset: [0,-12] })
+    .addTo(LAYERS.projects);
+  });
+
+  if (bounds.length > 0) MAP.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
+}
+
+// ---------- FILE LOADERS ----------
+function loadTraceFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.trace.clearLayers();
+    const name = file.name.toLowerCase();
+    try {
+      if (name.endsWith('.geojson') || name.endsWith('.json')) {
+        const gj = JSON.parse(e.target.result);
+        L.geoJSON(gj, {
+          style: { color: '#2E75B6', weight: 3, opacity: 0.9 },
+          pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, fillColor: '#2E75B6', color: 'white', weight: 1.5, fillOpacity: 0.9 })
+        }).addTo(LAYERS.trace);
+      } else if (name.endsWith('.dxf')) {
+        parseDxf(e.target.result);
+      } else if (name.endsWith('.kml')) {
+        parseKml(e.target.result);
+      }
+      const b = LAYERS.trace.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('Tracé geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function loadBdokFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.bdok.clearLayers();
+    try {
+      const gj = JSON.parse(e.target.result);
+      L.geoJSON(gj, {
+        style: { color: '#d9651e', weight: 2, opacity: 0.85, fillOpacity: 0.2, fillColor: '#d9651e' },
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 6, fillColor: '#d9651e', color: 'white', weight: 1.5, fillOpacity: 0.85 }),
+        onEachFeature: (f, layer) => {
+          if (f.properties) {
+            const html = Object.entries(f.properties).filter(([k,v])=>v!==null&&v!=='').slice(0,8)
+              .map(([k,v])=>`<div class="popup-row"><span class="popup-label">${escapeHtml(k)}</span><br><span class="popup-val">${escapeHtml(String(v))}</span></div>`).join('');
+            if (html) layer.bindPopup(`<div style="font-family:var(--mono);font-size:12px">${html}</div>`, { maxWidth: 300 });
+          }
+        }
+      }).addTo(LAYERS.bdok);
+      const b = LAYERS.bdok.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('BDOK geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden BDOK: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function loadStedinFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.stedin.clearLayers();
+    try {
+      const gj = JSON.parse(e.target.result);
+      L.geoJSON(gj, {
+        style: { color: '#e74c3c', weight: 2, opacity: 0.8 },
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, fillColor: '#e74c3c', color: 'white', weight: 1, fillOpacity: 0.8 }),
+        onEachFeature: (f, layer) => {
+          if (f.properties) {
+            const html = Object.entries(f.properties).filter(([k,v])=>v!==null&&v!=='').slice(0,6)
+              .map(([k,v])=>`<div class="popup-row"><span class="popup-label">${escapeHtml(k)}</span><br><span class="popup-val">${escapeHtml(String(v))}</span></div>`).join('');
+            if (html) layer.bindPopup(`<div style="font-family:var(--mono);font-size:12px">${html}</div>`, { maxWidth: 260 });
+          }
+        }
+      }).addTo(LAYERS.stedin);
+      const b = LAYERS.stedin.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('Stedin data geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden Stedin: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function clearUploadedLayers() {
+  ['trace','bdok','stedin'].forEach(k => LAYERS[k] && LAYERS[k].clearLayers());
+  showFeedback('Lagen gewist');
+}
+
+// ---------- DXF PARSER ----------
+function parseDxf(text) {
+  const ent = (text.match(/ENTITIES([\s\S]*?)ENDSEC/) || [])[1] || '';
+  // LWPOLYLINE
+  const polyRe = /LWPOLYLINE([\s\S]*?)(?=\n\s*0\s*\n)/g;
+  let m;
+  while ((m = polyRe.exec(ent)) !== null) {
+    const pts = [];
+    const ptRe = /^\s*10\r?\n\s*([\d.\-]+)\r?\n\s*20\r?\n\s*([\d.\-]+)/gm;
+    let pm;
+    while ((pm = ptRe.exec(m[1])) !== null) pts.push([parseFloat(pm[1]), parseFloat(pm[2])]);
+    if (pts.length > 1) {
+      const conv = pts.map(([x,y]) => isRd(x,y) ? rdToWgs(x,y) : [y,x]);
+      L.polyline(conv, { color: '#2E75B6', weight: 3, opacity: 0.9 }).addTo(LAYERS.trace);
+    }
+  }
+  // LINE entities
+  const lineRe = /LINE[\s\S]*?^\s*10\r?\n\s*([\d.\-]+)\r?\n\s*20\r?\n\s*([\d.\-]+)[\s\S]*?^\s*11\r?\n\s*([\d.\-]+)\r?\n\s*21\r?\n\s*([\d.\-]+)/gm;
+  while ((m = lineRe.exec(ent)) !== null) {
+    const x1=parseFloat(m[1]),y1=parseFloat(m[2]),x2=parseFloat(m[3]),y2=parseFloat(m[4]);
+    const p1 = isRd(x1,y1) ? rdToWgs(x1,y1) : [y1,x1];
+    const p2 = isRd(x2,y2) ? rdToWgs(x2,y2) : [y2,x2];
+    L.polyline([p1,p2], { color: '#2E75B6', weight: 2, opacity: 0.85 }).addTo(LAYERS.trace);
+  }
+}
+
+function isRd(x, y) { return x > 0 && x < 300000 && y > 300000 && y < 650000; }
+function rdToWgs(x, y) {
+  const dX = (x - 155000) / 100000, dY = (y - 463000) / 100000;
+  const lat = 52.15517440 + (3235.65389*dY - 32.58297*dX*dX - 0.24750*dY*dY) / 3600;
+  const lon = 5.38720621  + (5260.52916*dX + 105.94684*dX*dY + 2.45656*dX*dY*dY) / 3600;
+  return [lat, lon];
+}
+
+function parseKml(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  doc.querySelectorAll('coordinates').forEach(el => {
+    const pts = el.textContent.trim().split(/\s+/).map(c => {
+      const p = c.split(','); return [parseFloat(p[1]), parseFloat(p[0])];
+    }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+    if (pts.length > 1) L.polyline(pts, { color: '#2E75B6', weight: 3 }).addTo(LAYERS.trace);
+    else if (pts.length === 1) L.circleMarker(pts[0], { radius: 6, fillColor: '#2E75B6', color: 'white', weight: 1.5, fillOpacity: 0.9 }).addTo(LAYERS.trace);
+  });
+}
+
+function showFeedback(msg) {
+  const el = document.getElementById('uploadFeedback');
+  el.textContent = '✓ ' + msg; el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ============================================================
+// DATA LOADING
+// ============================================================
 async function loadDemo() {
   try {
     const r = await fetch('assets/demo-data.json');
     DATA = await r.json();
     document.getElementById('sourceLabel').innerHTML =
-      '<strong>Demo-data</strong> · Maasstraat + 3 voorbeelden · v' + (DATA.version || '10');
+      '<strong>Demo-data</strong> · Maasstraat + 3 voorbeelden · v' + (DATA.version||'10');
     render();
-  } catch (e) {
-    console.error(e);
-    alert('Kon demo-data niet laden. Check of assets/demo-data.json bestaat.');
-  }
+  } catch(e) { alert('Kon demo-data niet laden.'); }
 }
 
 async function loadFile(ev) {
-  const file = ev.target.files[0];
-  if (!file) return;
+  const file = ev.target.files[0]; if (!file) return;
   const buf = await file.arrayBuffer();
-  const wb  = XLSX.read(buf, { type: 'array', cellDates: true });
-
+  const wb = XLSX.read(buf, { type:'array', cellDates:true });
   function sheet(name) {
-    const ws = wb.Sheets[name];
-    if (!ws) return [];
-    // Header is row 3 (index 2) in our templates
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, raw: false, dateNF: 'yyyy-mm-dd' });
+    const ws = wb.Sheets[name]; if (!ws) return [];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, blankrows:false, raw:false, dateNF:'yyyy-mm-dd' });
     if (rows.length < 4) return [];
     const headers = rows[2];
-    return rows.slice(3)
-      .map(r => { const o = {}; headers.forEach((h, i) => { if (h) o[h] = r[i]; }); return o; })
-      .filter(o => Object.values(o).some(v => v !== undefined && v !== ''));
+    return rows.slice(3).map(r => { const o={}; headers.forEach((h,i) => { if(h) o[h]=r[i]; }); return o; })
+      .filter(o => Object.values(o).some(v => v!==undefined && v!==''));
   }
-
-  DATA = {
-    version: 'loaded',
-    generated_at: new Date().toISOString().slice(0,16).replace('T',' '),
-    source: file.name,
-    projects:         sheet('Projecten'),
-    dashboard:        sheet('Dashboard_Engineer'),
-    projectoverzicht: sheet('Projectoverzicht'),
-  };
-  document.getElementById('sourceLabel').innerHTML =
-    '<strong>' + escapeHtml(file.name) + '</strong> · '
-    + DATA.projects.length + ' projecten · '
-    + DATA.dashboard.length + ' dashboardrijen';
-  render();
+  DATA = { version:'loaded', source:file.name, projects:sheet('Projecten'), dashboard:sheet('Dashboard_Engineer'), projectoverzicht:sheet('Projectoverzicht') };
+  document.getElementById('sourceLabel').innerHTML = '<strong>'+escapeHtml(file.name)+'</strong> · '+DATA.projects.length+' projecten';
+  render(); ev.target.value = '';
 }
 
-// ---------- RENDER ----------
+// ============================================================
+// RENDER
+// ============================================================
 function render() {
   if (!DATA) return;
-  renderProjectoverzicht();
-  renderDashboard();
-  renderShowstoppers();
-  populateFilters();
+  renderPO(); renderDash(); renderSS(); populateFilters();
+  if (MAP) renderProjectMarkers();
 }
 
-function renderProjectoverzicht() {
+function renderPO() {
   const grid = document.getElementById('po-grid');
   grid.innerHTML = '';
-
   const projs = DATA.projects || [];
   document.getElementById('c-po').textContent = projs.length;
-
-  if (!projs.length) {
-    grid.innerHTML = '<div class="empty-state"><strong>Geen projecten</strong>Upload een xlsx of laad demo-data.</div>';
-    return;
-  }
-
+  if (!projs.length) { grid.innerHTML='<div class="empty-state"><strong>Geen projecten</strong></div>'; return; }
   projs.forEach(p => {
-    // Derive project's items from dashboard
-    const items = (DATA.dashboard || []).filter(d => d.ProjectID === p.ProjectID);
-
-    // Compute GSU_Verwacht = max Geimpliceerde_GSU (skip null/0/empty)
-    let gsuVerwacht = null;
-    let kritiekItem = null;
-    items.forEach(i => {
-      const v = parseDate(i.Geimpliceerde_GSU);
-      if (v && (!gsuVerwacht || v > gsuVerwacht)) {
-        gsuVerwacht = v;
-        kritiekItem = i.Type;
-      }
-    });
-
-    const gsuOrig = parseDate(p.GSU_Datum);
-    let deltaWd = null, deltaWk = null;
-    if (gsuOrig && gsuVerwacht) {
-      deltaWd = workdaysBetween(gsuOrig, gsuVerwacht);
-      deltaWk = Math.round((deltaWd / 5) * 10) / 10;
-    }
-
-    // Status classification
-    let statusClass = 'grey', statusLabel = 'Onbekend';
-    if (deltaWd !== null) {
-      if (deltaWd <= 0)      { statusClass = 'green'; statusLabel = '✓ Op koers'; }
-      else if (deltaWd <=10) { statusClass = 'amber'; statusLabel = '⚠ Krap (<2 wk slip)'; }
-      else if (deltaWd <=25) { statusClass = 'amber'; statusLabel = '🟠 Slip 2–5 wk'; }
-      else                   { statusClass = 'red';   statusLabel = '🔴 Slip >5 wk'; }
-    }
-
-    const actiepunten = items.filter(i => i.Actiepunt === true || i.Actiepunt === 'TRUE').length;
-    const showstoppers = items.filter(i =>
-      i.Showstopper_GSU === true || i.Showstopper_GSU === 'TRUE' ||
-      i.Showstopper_Fase === true || i.Showstopper_Fase === 'TRUE'
-    ).length;
-
+    const items = (DATA.dashboard||[]).filter(d => d.ProjectID===p.ProjectID);
+    let gsuV=null, kritiek=null;
+    items.forEach(i => { const v=parseDate(i.Geimpliceerde_GSU); if(v&&(!gsuV||v>gsuV)){gsuV=v;kritiek=i.Type;} });
+    const gsuO = parseDate(p.GSU_Datum);
+    let dWd=null, dWk=null;
+    if (gsuO&&gsuV) { dWd=workdaysBetween(gsuO,gsuV); dWk=Math.round((dWd/5)*10)/10; }
+    let sc='grey', sl='Onbekend';
+    if (dWd!==null) { if(dWd<=0){sc='green';sl='✓ Op koers';} else if(dWd<=10){sc='amber';sl='⚠ Krap';} else if(dWd<=25){sc='amber';sl='🟠 Slip 2–5 wk';} else {sc='red';sl='🔴 Slip >5 wk';} }
+    const ap = items.filter(i=>i.Actiepunt===true||i.Actiepunt==='TRUE').length;
+    const ss = items.filter(i=>i.Showstopper_GSU===true||i.Showstopper_GSU==='TRUE'||i.Showstopper_Fase===true||i.Showstopper_Fase==='TRUE').length;
     const card = document.createElement('div');
-    card.className = 'po-card po-card-' + statusClass;
+    card.className = 'po-card po-card-'+sc;
     card.innerHTML = `
       <div class="po-hd">
-        <div>
-          <div class="po-id">${escapeHtml(p.ProjectID || '')}</div>
-          <h3 class="po-name">${escapeHtml(p.Projectnaam || '—')}</h3>
-          <div class="po-route"><strong>${escapeHtml(p.Route || '')}</strong> · ${escapeHtml(p.Variant || '')}</div>
-        </div>
-        <span class="po-status po-status-${statusClass}">${escapeHtml(statusLabel)}</span>
+        <div><div class="po-id">${escapeHtml(p.ProjectID||'')}</div><h3 class="po-name">${escapeHtml(p.Projectnaam||'—')}</h3>
+        <div class="po-route"><strong>${escapeHtml(p.Route||'')}</strong> · ${escapeHtml(p.Variant||'')} · ${escapeHtml(p.Plaats||'')}</div></div>
+        <span class="po-status po-status-${sc}">${escapeHtml(sl)}</span>
       </div>
-
       <div class="po-dates">
-        <div class="po-date-block">
-          <div class="po-date-lbl">GSU origineel</div>
-          <div class="po-date-val">${fmtDate(gsuOrig)}</div>
-        </div>
-        <div class="po-date-block po-date-verwacht">
-          <div class="po-date-lbl">GSU verwacht</div>
-          <div class="po-date-val">${fmtDate(gsuVerwacht)}</div>
-        </div>
+        <div class="po-date-block"><div class="po-date-lbl">GSU origineel</div><div class="po-date-val">${fmtDate(gsuO)}</div></div>
+        <div class="po-date-block po-date-verwacht"><div class="po-date-lbl">GSU verwacht</div><div class="po-date-val">${fmtDate(gsuV)}</div></div>
       </div>
-
-      ${deltaWd !== null ? `
-        <div class="po-delta">
-          <span class="po-delta-val">${deltaWd >= 0 ? '+' : ''}${deltaWd} wd</span>
-          <span class="po-delta-lbl">= ${deltaWk} weken slip</span>
-        </div>
-      ` : ''}
-
-      ${kritiekItem ? `
-        <div class="po-krit">
-          <div class="po-krit-lbl">Kritiek item</div>
-          <div class="po-krit-val">${escapeHtml(kritiekItem)}</div>
-        </div>
-      ` : ''}
-
+      ${dWd!==null?`<div class="po-delta"><span class="po-delta-val">${dWd>=0?'+':''}${dWd} wd</span><span class="po-delta-lbl">= ${dWk} weken slip</span></div>`:''}
+      ${kritiek?`<div class="po-krit"><div class="po-krit-lbl">Kritiek item</div><div class="po-krit-val">${escapeHtml(kritiek)}</div></div>`:''}
       <div class="po-krit" style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line-2);padding-top:12px">
-        <div>
-          <div class="po-krit-lbl">Items</div>
-          <div class="c-mono" style="font-weight:600">${items.length}</div>
-        </div>
-        <div>
-          <div class="po-krit-lbl">Actiepunten</div>
-          <div class="c-mono" style="font-weight:600;color:${actiepunten>0?'var(--amber)':'var(--mute)'}">${actiepunten}</div>
-        </div>
-        <div>
-          <div class="po-krit-lbl">Showstoppers</div>
-          <div class="c-mono" style="font-weight:600;color:${showstoppers>0?'var(--red)':'var(--mute)'}">${showstoppers}</div>
-        </div>
-      </div>
-    `;
+        <div><div class="po-krit-lbl">Items</div><div class="c-mono" style="font-weight:600">${items.length}</div></div>
+        <div><div class="po-krit-lbl">Actiepunten</div><div class="c-mono" style="font-weight:600;color:${ap>0?'var(--amber)':'var(--mute)'}">${ap}</div></div>
+        <div><div class="po-krit-lbl">Showstoppers</div><div class="c-mono" style="font-weight:600;color:${ss>0?'var(--red)':'var(--mute)'}">${ss}</div></div>
+      </div>`;
     grid.appendChild(card);
   });
 }
 
-function renderDashboard() {
-  const rows = DATA.dashboard || [];
+function renderDash() {
+  const rows = DATA.dashboard||[];
   document.getElementById('c-dash').textContent = rows.length;
-
-  const body = document.getElementById('ds-body');
-  body.innerHTML = '';
-
-  const filterProj = document.getElementById('filter-project').value;
-  const filterHcat = document.getElementById('filter-hcat').value;
-  const filterStat = document.getElementById('filter-status').value;
-  const search     = document.getElementById('filter-search').value.toLowerCase();
-
-  const filtered = rows.filter(r => {
-    if (filterProj && r.ProjectID !== filterProj) return false;
-    if (filterHcat && r.Hoofdcategorie !== filterHcat) return false;
-    if (filterStat && r.Status !== filterStat) return false;
-    if (search && !(r.Type || '').toLowerCase().includes(search)) return false;
+  const body = document.getElementById('ds-body'); body.innerHTML='';
+  const fp=document.getElementById('filter-project').value, fh=document.getElementById('filter-hcat').value,
+        fs=document.getElementById('filter-status').value, sr=document.getElementById('filter-search').value.toLowerCase();
+  const filt = rows.filter(r => {
+    if(fp&&r.ProjectID!==fp) return false;
+    if(fh&&r.Hoofdcategorie!==fh) return false;
+    if(fs&&r.Status!==fs) return false;
+    if(sr&&!(r.Type||'').toLowerCase().includes(sr)) return false;
     return true;
   });
-
-  document.getElementById('ds-count').textContent = filtered.length + ' van ' + rows.length + ' rijen';
-
-  if (!filtered.length) {
-    body.innerHTML = '<tr><td colspan="15" class="empty-state" style="border:none;background:transparent">Geen rijen — pas filters aan</td></tr>';
-    return;
-  }
-
-  filtered.forEach(r => {
-    const sl = slClass(r.Stoplicht);
-    const st = (r.Status || '').replace('.','');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="sl ${sl}"></span></td>
-      <td class="c-id">${escapeHtml(r.ProjectID || '')}</td>
-      <td class="c-mono" style="white-space:nowrap">${escapeHtml((r.Hoofdcategorie||'').split('-')[0])}</td>
-      <td class="c-type">${escapeHtml(r.Type || '')}</td>
-      <td class="c-mono">${escapeHtml(r.Route || '')}</td>
-      <td class="c-mono">${escapeHtml(r.Variant || '')}</td>
-      <td class="c-num">${num(r.Norm_Doorlooptijd_Wd)}</td>
-      <td class="c-num">${num(r.Buffer_Wd)}</td>
-      <td><span class="status-pill status-${st || 'Nvt'}">${escapeHtml(r.Status || '—')}</span></td>
+  document.getElementById('ds-count').textContent = filt.length+' van '+rows.length+' rijen';
+  if (!filt.length) { body.innerHTML='<tr><td colspan="15" class="empty-state" style="border:none">Geen rijen</td></tr>'; return; }
+  filt.forEach(r => {
+    const sl=slClass(r.Stoplicht), st=(r.Status||'').replace('.','');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sl ${sl}"></span></td><td class="c-id">${escapeHtml(r.ProjectID||'')}</td>
+      <td class="c-mono">${escapeHtml((r.Hoofdcategorie||'').split('-')[0])}</td>
+      <td class="c-type">${escapeHtml(r.Type||'')}</td>
+      <td class="c-mono">${escapeHtml(r.Route||'')}</td><td class="c-mono">${escapeHtml(r.Variant||'')}</td>
+      <td class="c-num">${num(r.Norm_Doorlooptijd_Wd)}</td><td class="c-num">${num(r.Buffer_Wd)}</td>
+      <td><span class="status-pill status-${st||'Nvt'}">${escapeHtml(r.Status||'—')}</span></td>
       <td class="c-date">${fmtDate(parseDate(r.Datum_Uitgezet))}</td>
       <td class="c-date">${fmtDate(parseDate(r.Vereiste_Gereed_Datum))}</td>
       <td class="c-date">${fmtDate(parseDate(r.Verwacht_Gereed_Datum))}</td>
       <td class="c-date"><strong>${fmtDate(parseDate(r.Geimpliceerde_GSU))}</strong></td>
       <td class="c-num">${num(r.Resterende_Wd)}</td>
-      <td class="c-mono"><span class="haalbaar-${r.Haalbaar_GSU || ''}">${escapeHtml(r.Haalbaar_GSU || '—')}</span></td>
-    `;
+      <td><span class="haalbaar-${r.Haalbaar_GSU||''}">${escapeHtml(r.Haalbaar_GSU||'—')}</span></td>`;
     body.appendChild(tr);
   });
 }
 
-function renderShowstoppers() {
-  const rows = DATA.dashboard || [];
+function renderSS() {
+  const rows = DATA.dashboard||[];
   const issues = rows.filter(r => {
-    const isAP = r.Actiepunt === true || r.Actiepunt === 'TRUE';
-    const isSS = r.Showstopper_GSU === true || r.Showstopper_GSU === 'TRUE' ||
-                 r.Showstopper_Fase === true || r.Showstopper_Fase === 'TRUE';
-    const rest = typeof r.Resterende_Wd === 'number' ? r.Resterende_Wd : parseFloat(r.Resterende_Wd);
-    const overdue = !isNaN(rest) && rest < 0;
-    return isAP || isSS || overdue;
+    const isAP=r.Actiepunt===true||r.Actiepunt==='TRUE';
+    const isSS=r.Showstopper_GSU===true||r.Showstopper_GSU==='TRUE'||r.Showstopper_Fase===true||r.Showstopper_Fase==='TRUE';
+    const rest=typeof r.Resterende_Wd==='number'?r.Resterende_Wd:parseFloat(r.Resterende_Wd);
+    return isAP||isSS||(!isNaN(rest)&&rest<0);
   });
-
-  document.getElementById('c-ss').textContent = issues.length;
-
-  const body = document.getElementById('ss-body');
-  body.innerHTML = '';
-
-  if (!issues.length) {
-    body.innerHTML = '<tr><td colspan="9" class="empty-state" style="border:none;background:transparent"><strong>Geen vertragingen of showstoppers</strong>Alle taken op schema.</td></tr>';
-    return;
-  }
-
+  document.getElementById('c-ss').textContent=issues.length;
+  const body=document.getElementById('ss-body'); body.innerHTML='';
+  if (!issues.length) { body.innerHTML='<tr><td colspan="9" class="empty-state" style="border:none"><strong>Geen vertragingen</strong></td></tr>'; return; }
   issues.forEach(r => {
-    const sl = slClass(r.Stoplicht);
-    const vereist = parseDate(r.Vereiste_Gereed_Datum);
-    const verwacht = parseDate(r.Verwacht_Gereed_Datum);
-    const slip = (vereist && verwacht) ? workdaysBetween(vereist, verwacht) : null;
-
-    let probleem = [];
-    if (r.Showstopper_GSU === true || r.Showstopper_GSU === 'TRUE') probleem.push('GSU onhaalbaar');
-    if (r.Showstopper_Fase === true || r.Showstopper_Fase === 'TRUE') probleem.push('Fasegate overtijd');
-    if (r.Actiepunt === true || r.Actiepunt === 'TRUE') probleem.push('Actiepunt');
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="sl ${sl}"></span></td>
-      <td class="c-id">${escapeHtml(r.ProjectID || '')}</td>
-      <td class="c-type">${escapeHtml(r.Type || '')}</td>
-      <td><span class="status-pill status-${(r.Status||'').replace('.','')}">${escapeHtml(r.Status || '—')}</span></td>
-      <td class="c-date">${fmtDate(vereist)}</td>
-      <td class="c-date">${fmtDate(verwacht)}</td>
-      <td class="c-num"><strong>${slip !== null ? (slip >= 0 ? '+' : '') + slip : '—'}</strong></td>
-      <td class="c-mono"><span class="haalbaar-${r.Haalbaar_GSU || ''}">${escapeHtml(r.Haalbaar_GSU || '—')}</span></td>
-      <td style="font-size:12px">${probleem.map(p => `<span class="status-pill" style="background:var(--paper-2);color:var(--red);margin-right:4px">${p}</span>`).join('')}</td>
-    `;
+    const sl=slClass(r.Stoplicht), vr=parseDate(r.Vereiste_Gereed_Datum), vw=parseDate(r.Verwacht_Gereed_Datum);
+    const slip=(vr&&vw)?workdaysBetween(vr,vw):null;
+    let prob=[];
+    if(r.Showstopper_GSU===true||r.Showstopper_GSU==='TRUE') prob.push('GSU onhaalbaar');
+    if(r.Showstopper_Fase===true||r.Showstopper_Fase==='TRUE') prob.push('Fasegate overtijd');
+    if(r.Actiepunt===true||r.Actiepunt==='TRUE') prob.push('Actiepunt');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sl ${sl}"></span></td><td class="c-id">${escapeHtml(r.ProjectID||'')}</td>
+      <td class="c-type">${escapeHtml(r.Type||'')}</td>
+      <td><span class="status-pill status-${(r.Status||'').replace('.','')}">${escapeHtml(r.Status||'—')}</span></td>
+      <td class="c-date">${fmtDate(vr)}</td><td class="c-date">${fmtDate(vw)}</td>
+      <td class="c-num"><strong>${slip!==null?(slip>=0?'+':'')+slip:'—'}</strong></td>
+      <td><span class="haalbaar-${r.Haalbaar_GSU||''}">${escapeHtml(r.Haalbaar_GSU||'—')}</span></td>
+      <td>${prob.map(p=>`<span class="status-pill" style="background:var(--paper-2);color:var(--red);margin-right:4px">${p}</span>`).join('')}</td>`;
     body.appendChild(tr);
   });
 }
 
 function populateFilters() {
-  const rows = DATA.dashboard || [];
-  const fill = (id, values) => {
-    const s = document.getElementById(id);
-    const cur = s.value;
-    const first = s.querySelector('option');
-    s.innerHTML = '';
-    s.appendChild(first);
-    [...new Set(values.filter(Boolean))].sort().forEach(v => {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = v;
-      s.appendChild(o);
-    });
-    s.value = cur;
-  };
-  fill('filter-project', rows.map(r => r.ProjectID));
-  fill('filter-hcat',    rows.map(r => r.Hoofdcategorie));
+  const rows=DATA.dashboard||[];
+  const fill=(id,vals)=>{ const s=document.getElementById(id),cur=s.value,first=s.querySelector('option'); s.innerHTML=''; s.appendChild(first); [...new Set(vals.filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);}); s.value=cur; };
+  fill('filter-project',rows.map(r=>r.ProjectID));
+  fill('filter-hcat',rows.map(r=>r.Hoofdcategorie));
 }
 
-// ---------- TABS ----------
+// TABS
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('tab-active'));
-    document.querySelectorAll('.panel').forEach(x => x.classList.remove('panel-active'));
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('tab-active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('panel-active'));
     t.classList.add('tab-active');
-    document.getElementById('panel-' + t.dataset.tab).classList.add('panel-active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('panel-active');
+    if (t.dataset.tab==='kaart') {
+      setTimeout(() => { initMap(); MAP.invalidateSize(); if(DATA) renderProjectMarkers(); }, 50);
+    }
   });
 });
-
-// Filter events
 ['filter-project','filter-hcat','filter-status','filter-search'].forEach(id => {
-  document.getElementById(id).addEventListener('input', renderDashboard);
+  document.getElementById(id).addEventListener('input', renderDash);
 });
 
-// ---------- HELPERS ----------
-function parseDate(v) {
-  if (!v) return null;
-  if (v instanceof Date) return isNaN(v) ? null : v;
-  if (typeof v === 'number') {
-    // Excel serial date — unlikely here since we JSON-ify as ISO strings
-    const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
-    return isNaN(d) ? null : d;
-  }
-  const s = String(v);
-  // ISO yyyy-mm-dd
-  const m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m1) {
-    const d = new Date(+m1[1], +m1[2]-1, +m1[3]);
-    return isNaN(d) ? null : d;
-  }
-  // dd-mm-yyyy
-  const m2 = s.match(/^(\d{2})-(\d{2})-(\d{4})/);
-  if (m2) {
-    const d = new Date(+m2[3], +m2[2]-1, +m2[1]);
-    return isNaN(d) ? null : d;
-  }
-  return null;
-}
+// HELPERS
+function parseDate(v){if(!v)return null;if(v instanceof Date)return isNaN(v)?null:v;const s=String(v);const m1=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m1){const d=new Date(+m1[1],+m1[2]-1,+m1[3]);return isNaN(d)?null:d;}const m2=s.match(/^(\d{2})-(\d{2})-(\d{4})/);if(m2){const d=new Date(+m2[3],+m2[2]-1,+m2[1]);return isNaN(d)?null:d;}return null;}
+function fmtDate(d){if(!d)return'<span style="color:var(--mute)">—</span>';return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();}
+function workdaysBetween(a,b){if(!a||!b)return null;const s=a<b?a:b,e=a<b?b:a,sg=a<b?1:-1;let c=0;const cur=new Date(s);while(cur<e){const d=cur.getDay();if(d!==0&&d!==6)c++;cur.setDate(cur.getDate()+1);}return sg*c;}
+function slClass(v){if(!v)return'sl-grey';if(v.includes('🔴'))return'sl-red';if(v.includes('🟠'))return'sl-amber';if(v.includes('🟢'))return'sl-green';return'sl-grey';}
+function num(v){if(v===null||v===undefined||v==='')return'<span style="color:var(--mute)">—</span>';const n=typeof v==='number'?v:parseFloat(v);return isNaN(n)?escapeHtml(String(v)):n;}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-function fmtDate(d) {
-  if (!d) return '<span style="color:var(--mute)">—</span>';
-  const dd = String(d.getDate()).padStart(2,'0');
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  return dd + '-' + mm + '-' + d.getFullYear();
-}
-
-function workdaysBetween(a, b) {
-  if (!a || !b) return null;
-  const start = a < b ? a : b;
-  const end   = a < b ? b : a;
-  let sign    = a < b ? 1 : -1;
-  let count = 0;
-  const cur = new Date(start);
-  while (cur < end) {
-    const day = cur.getDay();
-    if (day !== 0 && day !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return sign * count;
-}
-
-function slClass(v) {
-  if (!v) return 'sl-grey';
-  if (v.includes('🔴')) return 'sl-red';
-  if (v.includes('🟠')) return 'sl-amber';
-  if (v.includes('🟢')) return 'sl-green';
-  return 'sl-grey';
-}
-
-function num(v) {
-  if (v === null || v === undefined || v === '') return '<span style="color:var(--mute)">—</span>';
-  const n = typeof v === 'number' ? v : parseFloat(v);
-  if (isNaN(n)) return escapeHtml(String(v));
-  return n;
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-
-// ---------- INIT ----------
 loadDemo();
 </script>
-
 </body>
 </html>
