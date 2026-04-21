@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Engineering — IWR Procesnavigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="dash-body">
+
+<header class="dash-header">
+  <div class="wrap">
+    <h1><span class="brand-mark">◢◤</span>Dashboard Engineering · IWR Procesnavigator <span style="color:var(--signal);margin-left:12px">v10</span></h1>
+    <nav>
+      <a href="index.html">← Terug naar start</a>
+      <a href="assets/IWR_Procesnavigator_v10.xlsx" download>Download xlsx</a>
+    </nav>
+  </div>
+</header>
+
+<div class="dash-toolbar">
+  <div class="wrap">
+    <div class="tb-left">
+      <span class="tb-label">Data-bron:</span>
+      <div class="tb-source" id="sourceLabel"><strong>Demo-data</strong> · Maasstraat + 3 voorbeelden</div>
+    </div>
+    <div>
+      <button class="file-btn-secondary file-btn" onclick="loadDemo()">⟲ Demo-data laden</button>
+      <label class="file-btn" style="cursor:pointer;margin-left:8px">
+        📥 Eigen xlsx laden
+        <input type="file" accept=".xlsx,.xlsm" style="display:none" onchange="loadFile(event)">
+      </label>
+    </div>
+  </div>
+</div>
+
+<nav class="dash-tabs wrap" style="max-width:1180px;margin:0 auto;padding:0 32px">
+  <button class="tab tab-active" data-tab="po">Projectoverzicht <span class="tab-count" id="c-po">—</span></button>
+  <button class="tab" data-tab="dash">Dashboard Engineer <span class="tab-count" id="c-dash">—</span></button>
+  <button class="tab" data-tab="showstoppers">Vertragingen <span class="tab-count" id="c-ss">—</span></button>
+</nav>
+
+<main class="dash-main">
+  <div class="wrap">
+
+    <!-- PANEL: Projectoverzicht -->
+    <section id="panel-po" class="panel panel-active">
+      <div id="po-grid" class="po-grid"></div>
+    </section>
+
+    <!-- PANEL: Dashboard Engineer -->
+    <section id="panel-dash" class="panel">
+      <div class="ds-toolbar">
+        <select id="filter-project">
+          <option value="">Alle projecten</option>
+        </select>
+        <select id="filter-hcat">
+          <option value="">Alle hoofdcategorieën</option>
+        </select>
+        <select id="filter-status">
+          <option value="">Alle statussen</option>
+          <option>Nodig</option>
+          <option>Ingediend</option>
+          <option>Afgerond</option>
+          <option>Goedgekeurd</option>
+          <option>Afgewezen</option>
+          <option>N.v.t</option>
+        </select>
+        <input type="search" id="filter-search" placeholder="Zoek in type…" style="min-width:200px">
+        <div class="ds-count" id="ds-count">— rijen</div>
+      </div>
+
+      <div class="ds-table-wrap">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Project</th>
+              <th>Hcat</th>
+              <th>Type</th>
+              <th>Route</th>
+              <th>Var</th>
+              <th class="c-num">Norm</th>
+              <th class="c-num">Buffer</th>
+              <th>Status</th>
+              <th>Uitgezet</th>
+              <th>Vereist gereed</th>
+              <th>Verwacht gereed</th>
+              <th>Impl. GSU</th>
+              <th class="c-num">Rest wd</th>
+              <th>Haalbaar</th>
+            </tr>
+          </thead>
+          <tbody id="ds-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PANEL: Showstoppers -->
+    <section id="panel-showstoppers" class="panel">
+      <div class="ds-table-wrap">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Project</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Vereist gereed</th>
+              <th>Verwacht gereed</th>
+              <th>Slip (wd)</th>
+              <th>Haalbaar</th>
+              <th>Probleem</th>
+            </tr>
+          </thead>
+          <tbody id="ss-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+// =========================================================
+// IWR Procesnavigator — Dashboard logic
+// =========================================================
+
+let DATA = null;
+const TODAY = new Date();
+
+// ---------- LOADERS ----------
+async function loadDemo() {
+  try {
+    const r = await fetch('assets/demo-data.json');
+    DATA = await r.json();
+    document.getElementById('sourceLabel').innerHTML =
+      '<strong>Demo-data</strong> · Maasstraat + 3 voorbeelden · v' + (DATA.version || '10');
+    render();
+  } catch (e) {
+    console.error(e);
+    alert('Kon demo-data niet laden. Check of assets/demo-data.json bestaat.');
+  }
+}
+
+async function loadFile(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: 'array', cellDates: true });
+
+  function sheet(name) {
+    const ws = wb.Sheets[name];
+    if (!ws) return [];
+    // Header is row 3 (index 2) in our templates
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, raw: false, dateNF: 'yyyy-mm-dd' });
+    if (rows.length < 4) return [];
+    const headers = rows[2];
+    return rows.slice(3)
+      .map(r => { const o = {}; headers.forEach((h, i) => { if (h) o[h] = r[i]; }); return o; })
+      .filter(o => Object.values(o).some(v => v !== undefined && v !== ''));
+  }
+
+  DATA = {
+    version: 'loaded',
+    generated_at: new Date().toISOString().slice(0,16).replace('T',' '),
+    source: file.name,
+    projects:         sheet('Projecten'),
+    dashboard:        sheet('Dashboard_Engineer'),
+    projectoverzicht: sheet('Projectoverzicht'),
+  };
+  document.getElementById('sourceLabel').innerHTML =
+    '<strong>' + escapeHtml(file.name) + '</strong> · '
+    + DATA.projects.length + ' projecten · '
+    + DATA.dashboard.length + ' dashboardrijen';
+  render();
+}
+
+// ---------- RENDER ----------
+function render() {
+  if (!DATA) return;
+  renderProjectoverzicht();
+  renderDashboard();
+  renderShowstoppers();
+  populateFilters();
+}
+
+function renderProjectoverzicht() {
+  const grid = document.getElementById('po-grid');
+  grid.innerHTML = '';
+
+  const projs = DATA.projects || [];
+  document.getElementById('c-po').textContent = projs.length;
+
+  if (!projs.length) {
+    grid.innerHTML = '<div class="empty-state"><strong>Geen projecten</strong>Upload een xlsx of laad demo-data.</div>';
+    return;
+  }
+
+  projs.forEach(p => {
+    // Derive project's items from dashboard
+    const items = (DATA.dashboard || []).filter(d => d.ProjectID === p.ProjectID);
+
+    // Compute GSU_Verwacht = max Geimpliceerde_GSU (skip null/0/empty)
+    let gsuVerwacht = null;
+    let kritiekItem = null;
+    items.forEach(i => {
+      const v = parseDate(i.Geimpliceerde_GSU);
+      if (v && (!gsuVerwacht || v > gsuVerwacht)) {
+        gsuVerwacht = v;
+        kritiekItem = i.Type;
+      }
+    });
+
+    const gsuOrig = parseDate(p.GSU_Datum);
+    let deltaWd = null, deltaWk = null;
+    if (gsuOrig && gsuVerwacht) {
+      deltaWd = workdaysBetween(gsuOrig, gsuVerwacht);
+      deltaWk = Math.round((deltaWd / 5) * 10) / 10;
+    }
+
+    // Status classification
+    let statusClass = 'grey', statusLabel = 'Onbekend';
+    if (deltaWd !== null) {
+      if (deltaWd <= 0)      { statusClass = 'green'; statusLabel = '✓ Op koers'; }
+      else if (deltaWd <=10) { statusClass = 'amber'; statusLabel = '⚠ Krap (<2 wk slip)'; }
+      else if (deltaWd <=25) { statusClass = 'amber'; statusLabel = '🟠 Slip 2–5 wk'; }
+      else                   { statusClass = 'red';   statusLabel = '🔴 Slip >5 wk'; }
+    }
+
+    const actiepunten = items.filter(i => i.Actiepunt === true || i.Actiepunt === 'TRUE').length;
+    const showstoppers = items.filter(i =>
+      i.Showstopper_GSU === true || i.Showstopper_GSU === 'TRUE' ||
+      i.Showstopper_Fase === true || i.Showstopper_Fase === 'TRUE'
+    ).length;
+
+    const card = document.createElement('div');
+    card.className = 'po-card po-card-' + statusClass;
+    card.innerHTML = `
+      <div class="po-hd">
+        <div>
+          <div class="po-id">${escapeHtml(p.ProjectID || '')}</div>
+          <h3 class="po-name">${escapeHtml(p.Projectnaam || '—')}</h3>
+          <div class="po-route"><strong>${escapeHtml(p.Route || '')}</strong> · ${escapeHtml(p.Variant || '')}</div>
+        </div>
+        <span class="po-status po-status-${statusClass}">${escapeHtml(statusLabel)}</span>
+      </div>
+
+      <div class="po-dates">
+        <div class="po-date-block">
+          <div class="po-date-lbl">GSU origineel</div>
+          <div class="po-date-val">${fmtDate(gsuOrig)}</div>
+        </div>
+        <div class="po-date-block po-date-verwacht">
+          <div class="po-date-lbl">GSU verwacht</div>
+          <div class="po-date-val">${fmtDate(gsuVerwacht)}</div>
+        </div>
+      </div>
+
+      ${deltaWd !== null ? `
+        <div class="po-delta">
+          <span class="po-delta-val">${deltaWd >= 0 ? '+' : ''}${deltaWd} wd</span>
+          <span class="po-delta-lbl">= ${deltaWk} weken slip</span>
+        </div>
+      ` : ''}
+
+      ${kritiekItem ? `
+        <div class="po-krit">
+          <div class="po-krit-lbl">Kritiek item</div>
+          <div class="po-krit-val">${escapeHtml(kritiekItem)}</div>
+        </div>
+      ` : ''}
+
+      <div class="po-krit" style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line-2);padding-top:12px">
+        <div>
+          <div class="po-krit-lbl">Items</div>
+          <div class="c-mono" style="font-weight:600">${items.length}</div>
+        </div>
+        <div>
+          <div class="po-krit-lbl">Actiepunten</div>
+          <div class="c-mono" style="font-weight:600;color:${actiepunten>0?'var(--amber)':'var(--mute)'}">${actiepunten}</div>
+        </div>
+        <div>
+          <div class="po-krit-lbl">Showstoppers</div>
+          <div class="c-mono" style="font-weight:600;color:${showstoppers>0?'var(--red)':'var(--mute)'}">${showstoppers}</div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderDashboard() {
+  const rows = DATA.dashboard || [];
+  document.getElementById('c-dash').textContent = rows.length;
+
+  const body = document.getElementById('ds-body');
+  body.innerHTML = '';
+
+  const filterProj = document.getElementById('filter-project').value;
+  const filterHcat = document.getElementById('filter-hcat').value;
+  const filterStat = document.getElementById('filter-status').value;
+  const search     = document.getElementById('filter-search').value.toLowerCase();
+
+  const filtered = rows.filter(r => {
+    if (filterProj && r.ProjectID !== filterProj) return false;
+    if (filterHcat && r.Hoofdcategorie !== filterHcat) return false;
+    if (filterStat && r.Status !== filterStat) return false;
+    if (search && !(r.Type || '').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  document.getElementById('ds-count').textContent = filtered.length + ' van ' + rows.length + ' rijen';
+
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="15" class="empty-state" style="border:none;background:transparent">Geen rijen — pas filters aan</td></tr>';
+    return;
+  }
+
+  filtered.forEach(r => {
+    const sl = slClass(r.Stoplicht);
+    const st = (r.Status || '').replace('.','');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="sl ${sl}"></span></td>
+      <td class="c-id">${escapeHtml(r.ProjectID || '')}</td>
+      <td class="c-mono" style="white-space:nowrap">${escapeHtml((r.Hoofdcategorie||'').split('-')[0])}</td>
+      <td class="c-type">${escapeHtml(r.Type || '')}</td>
+      <td class="c-mono">${escapeHtml(r.Route || '')}</td>
+      <td class="c-mono">${escapeHtml(r.Variant || '')}</td>
+      <td class="c-num">${num(r.Norm_Doorlooptijd_Wd)}</td>
+      <td class="c-num">${num(r.Buffer_Wd)}</td>
+      <td><span class="status-pill status-${st || 'Nvt'}">${escapeHtml(r.Status || '—')}</span></td>
+      <td class="c-date">${fmtDate(parseDate(r.Datum_Uitgezet))}</td>
+      <td class="c-date">${fmtDate(parseDate(r.Vereiste_Gereed_Datum))}</td>
+      <td class="c-date">${fmtDate(parseDate(r.Verwacht_Gereed_Datum))}</td>
+      <td class="c-date"><strong>${fmtDate(parseDate(r.Geimpliceerde_GSU))}</strong></td>
+      <td class="c-num">${num(r.Resterende_Wd)}</td>
+      <td class="c-mono"><span class="haalbaar-${r.Haalbaar_GSU || ''}">${escapeHtml(r.Haalbaar_GSU || '—')}</span></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function renderShowstoppers() {
+  const rows = DATA.dashboard || [];
+  const issues = rows.filter(r => {
+    const isAP = r.Actiepunt === true || r.Actiepunt === 'TRUE';
+    const isSS = r.Showstopper_GSU === true || r.Showstopper_GSU === 'TRUE' ||
+                 r.Showstopper_Fase === true || r.Showstopper_Fase === 'TRUE';
+    const rest = typeof r.Resterende_Wd === 'number' ? r.Resterende_Wd : parseFloat(r.Resterende_Wd);
+    const overdue = !isNaN(rest) && rest < 0;
+    return isAP || isSS || overdue;
+  });
+
+  document.getElementById('c-ss').textContent = issues.length;
+
+  const body = document.getElementById('ss-body');
+  body.innerHTML = '';
+
+  if (!issues.length) {
+    body.innerHTML = '<tr><td colspan="9" class="empty-state" style="border:none;background:transparent"><strong>Geen vertragingen of showstoppers</strong>Alle taken op schema.</td></tr>';
+    return;
+  }
+
+  issues.forEach(r => {
+    const sl = slClass(r.Stoplicht);
+    const vereist = parseDate(r.Vereiste_Gereed_Datum);
+    const verwacht = parseDate(r.Verwacht_Gereed_Datum);
+    const slip = (vereist && verwacht) ? workdaysBetween(vereist, verwacht) : null;
+
+    let probleem = [];
+    if (r.Showstopper_GSU === true || r.Showstopper_GSU === 'TRUE') probleem.push('GSU onhaalbaar');
+    if (r.Showstopper_Fase === true || r.Showstopper_Fase === 'TRUE') probleem.push('Fasegate overtijd');
+    if (r.Actiepunt === true || r.Actiepunt === 'TRUE') probleem.push('Actiepunt');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="sl ${sl}"></span></td>
+      <td class="c-id">${escapeHtml(r.ProjectID || '')}</td>
+      <td class="c-type">${escapeHtml(r.Type || '')}</td>
+      <td><span class="status-pill status-${(r.Status||'').replace('.','')}">${escapeHtml(r.Status || '—')}</span></td>
+      <td class="c-date">${fmtDate(vereist)}</td>
+      <td class="c-date">${fmtDate(verwacht)}</td>
+      <td class="c-num"><strong>${slip !== null ? (slip >= 0 ? '+' : '') + slip : '—'}</strong></td>
+      <td class="c-mono"><span class="haalbaar-${r.Haalbaar_GSU || ''}">${escapeHtml(r.Haalbaar_GSU || '—')}</span></td>
+      <td style="font-size:12px">${probleem.map(p => `<span class="status-pill" style="background:var(--paper-2);color:var(--red);margin-right:4px">${p}</span>`).join('')}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function populateFilters() {
+  const rows = DATA.dashboard || [];
+  const fill = (id, values) => {
+    const s = document.getElementById(id);
+    const cur = s.value;
+    const first = s.querySelector('option');
+    s.innerHTML = '';
+    s.appendChild(first);
+    [...new Set(values.filter(Boolean))].sort().forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      s.appendChild(o);
+    });
+    s.value = cur;
+  };
+  fill('filter-project', rows.map(r => r.ProjectID));
+  fill('filter-hcat',    rows.map(r => r.Hoofdcategorie));
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('tab-active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('panel-active'));
+    t.classList.add('tab-active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('panel-active');
+  });
+});
+
+// Filter events
+['filter-project','filter-hcat','filter-status','filter-search'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderDashboard);
+});
+
+// ---------- HELPERS ----------
+function parseDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  if (typeof v === 'number') {
+    // Excel serial date — unlikely here since we JSON-ify as ISO strings
+    const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+    return isNaN(d) ? null : d;
+  }
+  const s = String(v);
+  // ISO yyyy-mm-dd
+  const m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m1) {
+    const d = new Date(+m1[1], +m1[2]-1, +m1[3]);
+    return isNaN(d) ? null : d;
+  }
+  // dd-mm-yyyy
+  const m2 = s.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (m2) {
+    const d = new Date(+m2[3], +m2[2]-1, +m2[1]);
+    return isNaN(d) ? null : d;
+  }
+  return null;
+}
+
+function fmtDate(d) {
+  if (!d) return '<span style="color:var(--mute)">—</span>';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return dd + '-' + mm + '-' + d.getFullYear();
+}
+
+function workdaysBetween(a, b) {
+  if (!a || !b) return null;
+  const start = a < b ? a : b;
+  const end   = a < b ? b : a;
+  let sign    = a < b ? 1 : -1;
+  let count = 0;
+  const cur = new Date(start);
+  while (cur < end) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return sign * count;
+}
+
+function slClass(v) {
+  if (!v) return 'sl-grey';
+  if (v.includes('🔴')) return 'sl-red';
+  if (v.includes('🟠')) return 'sl-amber';
+  if (v.includes('🟢')) return 'sl-green';
+  return 'sl-grey';
+}
+
+function num(v) {
+  if (v === null || v === undefined || v === '') return '<span style="color:var(--mute)">—</span>';
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  if (isNaN(n)) return escapeHtml(String(v));
+  return n;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ---------- INIT ----------
+loadDemo();
+</script>
+
+</body>
+</html>

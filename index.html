@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IWR Procesnavigator — Planningstool voor SoRSoZ</title>
+<meta name="description" content="Voorspelbare projectplanning richting GSU voor Infrawerk Rijnmond. Gebouwd op IWR-contract v2.1 en Trinitas-doorlooptijden.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="landing">
+
+<div class="grid-bg"></div>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-mark">◢◤</span>
+      <span class="brand-text">IWR Procesnavigator</span>
+      <span class="brand-ver">v10</span>
+    </div>
+    <nav class="site-nav">
+      <a href="#wat">Wat</a>
+      <a href="#hoe">Hoe</a>
+      <a href="#download">Download</a>
+      <a href="dashboard.html" class="nav-cta">Live dashboard →</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap hero-wrap">
+    <div class="eyebrow">Infrawerk Rijnmond · SoRSoZ · Stedin / Evides</div>
+    <h1 class="headline">
+      Voorspelbaar plannen<br>
+      <em>richting de GSU.</em>
+    </h1>
+    <p class="lede">
+      Een planningsinstrument dat engineers laat zien wanneer een project
+      écht klaar kan zijn met engineering, welke taak op het kritieke pad
+      zit, en wat de verwachte GSU wordt — op basis van het IWR-contract v2.1
+      en Trinitas-doorlooptijden.
+    </p>
+    <div class="hero-ctas">
+      <a href="dashboard.html" class="btn btn-primary">Open live dashboard</a>
+      <a href="assets/IWR_Procesnavigator_v10.xlsx" class="btn btn-ghost" download>
+        Download Excel-tool <span class="meta">· 158 kB</span>
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-val">52</div>
+        <div class="stat-lbl">normtijden<br>Trinitas + IWR</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">72</div>
+        <div class="stat-lbl">route × variant<br>gate-offsets</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">4 856</div>
+        <div class="stat-lbl">formules<br>0 errors</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">3</div>
+        <div class="stat-lbl">routes<br>KG · NG · RC</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="wat" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-idx">01</div>
+      <h2>Wat doet deze tool</h2>
+    </div>
+    <div class="cols-3">
+      <article class="card">
+        <div class="card-num">A</div>
+        <h3>Afhankelijkheden bewaken</h3>
+        <p>Per project één rij per onderzoek, vergunning, boring, proefgat, verkeersplan, schouw of gate. Status, eigenaar, normdoorlooptijd en buffer — alles zichtbaar.</p>
+      </article>
+      <article class="card card-accent">
+        <div class="card-num">B</div>
+        <h3>GSU-voorspelling</h3>
+        <p>Per taak een <em>geïmpliceerde GSU</em>: de vroegst haalbare startdatum die dit item toelaat. Het projectoverzicht toont de MAX daarvan = de verwachte GSU.</p>
+      </article>
+      <article class="card">
+        <div class="card-num">C</div>
+        <h3>Kritiek pad aanwijzen</h3>
+        <p>Welk onderzoek, welke vergunning, welke gate veroorzaakt de slip? Eén kolom, één naam. Dat is het interventiepunt voor de engineer.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="voorspelbaarheid" class="section section-dark">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-idx">02</div>
+      <h2>Hoe de voorspelling werkt</h2>
+    </div>
+
+    <div class="formula-block">
+      <div class="formula-row">
+        <span class="formula-label">Vereiste gereed-datum per item</span>
+        <code>WORKDAY(GSU; –Buffer_Wd)</code>
+      </div>
+      <div class="formula-row">
+        <span class="formula-label">Uiterlijke uitzetdatum</span>
+        <code>WORKDAY(Vereist_Gereed; –Norm_Doorlooptijd_Wd)</code>
+      </div>
+      <div class="formula-row">
+        <span class="formula-label">Verwacht gereed</span>
+        <code>WORKDAY(Datum_Uitgezet; +Norm_Doorlooptijd_Wd)</code>
+      </div>
+      <div class="formula-row formula-hl">
+        <span class="formula-label">Geïmpliceerde GSU per item</span>
+        <code>WORKDAY(Verwacht_Gereed; +Buffer_Wd)</code>
+      </div>
+      <div class="formula-row formula-hl">
+        <span class="formula-label">Verwachte GSU per project</span>
+        <code>MAX(Geimpliceerde_GSU) over items van dit project</code>
+      </div>
+    </div>
+
+    <p class="voorspel-note">
+      Eenheid overal in <strong>werkdagen</strong>. Weekenden worden automatisch
+      overgeslagen door <code>WORKDAY</code> en <code>NETWORKDAYS</code>.
+      De tool onderscheidt route × variant (KG / NG / RC × NOidK / OidK) en
+      gebruikt per combinatie de juiste buffer uit het IWR-contract.
+    </p>
+  </div>
+</section>
+
+<section id="hoe" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-idx">03</div>
+      <h2>Werkwijze in 4 stappen</h2>
+    </div>
+    <ol class="steps">
+      <li>
+        <span class="step-n">1</span>
+        <h3>Project aanmaken</h3>
+        <p>Vul in blad <code>Projecten</code>: ProjectID, Projectnaam, GSU-datum, Route, Variant, Engineer.</p>
+      </li>
+      <li>
+        <span class="step-n">2</span>
+        <h3>Afhankelijkheden toevoegen</h3>
+        <p>In <code>Dashboard_Engineer</code>: één rij per onderzoek/vergunning/gate. Dropdowns cascaderen: Hoofdcategorie → Subcategorie → Type.</p>
+      </li>
+      <li>
+        <span class="step-n">3</span>
+        <h3>Status bijhouden</h3>
+        <p>Zet status op <em>Ingediend</em> → datum wordt gestempeld (met VBA). Bij <em>Afgerond</em> → ontvangen-datum. Stoplicht wordt vanzelf groen/oranje/rood.</p>
+      </li>
+      <li>
+        <span class="step-n">4</span>
+        <h3>Projectoverzicht lezen</h3>
+        <p>Hier staat de verwachte GSU per project, slip in werkdagen/weken, en welk item het kritieke pad bepaalt.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="download" class="section section-accent">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-idx">04</div>
+      <h2>Aan de slag</h2>
+    </div>
+    <div class="download-grid">
+      <div class="download-card">
+        <div class="download-icon">📊</div>
+        <h3>Live web-dashboard</h3>
+        <p>Bekijk Projectoverzicht en Dashboard_Engineer in de browser. Demo-data of eigen xlsx uploaden.</p>
+        <a href="dashboard.html" class="btn btn-primary">Open dashboard</a>
+      </div>
+      <div class="download-card">
+        <div class="download-icon">📥</div>
+        <h3>Excel-tool v10</h3>
+        <p>Volledige werkmap met alle formules, dropdowns, voorbeeldprojecten inclusief Maasstraat.</p>
+        <a href="assets/IWR_Procesnavigator_v10.xlsx" class="btn btn-primary" download>Download xlsx</a>
+      </div>
+      <div class="download-card">
+        <div class="download-icon">📘</div>
+        <h3>README v10</h3>
+        <p>Wat er nieuw is, hoe je met cascading dropdowns werkt, VBA-installatie voor auto-stamping.</p>
+        <a href="assets/README_v10.md" class="btn btn-ghost">Lees README</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bronnen" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-idx">05</div>
+      <h2>Bronnen</h2>
+    </div>
+    <dl class="bronnen">
+      <dt>IWR-contract v2.1</dt>
+      <dd>9 PDFs · fasen, gate-einddatums per route × variant, doorlooptijden werkvoorbereiding</dd>
+      <dt>Trinitas</dt>
+      <dd>Planning-werkboek · normtijden voor alle onderzoeken, boringen, vergunningen en proefgaten</dd>
+      <dt>Planning NG 07-04-2026</dt>
+      <dd>Concept-planning NG · project Maasstraat IRN24-0175 is hieruit geladen als voorbeeld</dd>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-wrap">
+    <div class="foot-brand">
+      <span class="brand-mark">◢◤</span>
+      <strong>IWR Procesnavigator v10</strong>
+    </div>
+    <div class="foot-meta">
+      Gebouwd op IWR-contract v2.1 en Trinitas · Werkdagen, WORKDAY-formules · 3 routes × 2 varianten
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
