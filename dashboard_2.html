@@ -1,0 +1,1406 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Engineering — IWR Procesnavigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+#map { height: 580px; width: 100%; border: 1px solid var(--line); background: #eef0e8; }
+.map-wrap { position: relative; }
+.map-btn {
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 8px 14px; font-family: var(--mono); font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.15s; color: var(--ink);
+  white-space: nowrap;
+}
+.map-btn:hover { background: var(--ink); color: white; }
+.map-layers {
+  position: absolute; top: 12px; left: 12px; z-index: 1000;
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: var(--mono); font-size: 11px; min-width: 200px;
+}
+.map-layers-title {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--mute); margin-bottom: 10px; font-size: 10px;
+}
+.layer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; }
+.layer-row input { cursor: pointer; accent-color: var(--signal); }
+.layer-row label { cursor: pointer; }
+.map-legend {
+  position: absolute; bottom: 24px; left: 12px; z-index: 1000;
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: var(--mono); font-size: 11px; min-width: 170px;
+}
+.map-legend-title {
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--mute); margin-bottom: 10px; font-size: 10px;
+}
+.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(0,0,0,0.15); }
+.map-toolbar {
+  display: flex; gap: 10px; align-items: center;
+  padding: 12px 0; flex-wrap: wrap; margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.upload-feedback {
+  padding: 8px 14px; font-family: var(--mono); font-size: 11px;
+  color: var(--green); background: #e3f4e8; border-radius: 2px; display: none;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 2px; border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.leaflet-popup-content { font-family: var(--mono); font-size: 12px; margin: 12px 16px; }
+.popup-name { font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 8px; color: var(--ink); }
+.popup-row { margin-bottom: 4px; }
+.popup-label { color: var(--mute); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.popup-val { color: var(--ink); font-weight: 500; }
+.info-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 20px; }
+.info-card { background: var(--paper-2); border: 1px solid var(--line); padding: 20px; }
+.info-card-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); margin-bottom: 8px; }
+
+/* ========== SURVEY TOOLS (Sprint 2) ========== */
+.survey-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 10px 0; margin-bottom: 12px;
+  border-bottom: 1px solid var(--line); border-top: 1px solid var(--line);
+  background: linear-gradient(to right, rgba(255,247,228,0.5), transparent);
+}
+.survey-toolbar .tb-label {
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--mute); margin-right: 6px; padding-left: 4px;
+}
+.draw-btn {
+  background: white; border: 1px solid var(--line); border-radius: 2px;
+  padding: 7px 14px; font-family: var(--mono); font-size: 11px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  cursor: pointer; transition: all 0.15s; color: var(--ink);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.draw-btn:hover { background: var(--ink); color: white; }
+.draw-btn.active { background: #d68910; color: white; border-color: #d68910; }
+.draw-btn.active::before {
+  content: '●'; color: white; animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.draw-btn.secondary { color: var(--mute); }
+.draw-btn.secondary:hover { color: var(--ink); background: var(--paper-2); }
+.draw-count {
+  font-family: var(--mono); font-size: 11px; color: var(--mute);
+  padding: 4px 10px; background: var(--paper-2); border-radius: 2px;
+  margin-left: auto;
+}
+.draw-count strong { color: var(--ink); }
+
+/* Boring marker custom icon */
+.boring-marker {
+  background: #c0392b; width: 14px; height: 14px;
+  border-radius: 50%; border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  position: relative;
+}
+.boring-marker::after {
+  content: ''; position: absolute; inset: -6px;
+  border: 1px dashed #c0392b; border-radius: 50%; opacity: 0.5;
+}
+
+/* Proefsleuf style */
+.proefsleuf-fill { fill: #d68910; fill-opacity: 0.25; stroke: #d68910; stroke-width: 2; }
+
+/* Survey popup form */
+.survey-form {
+  font-family: var(--mono); font-size: 12px;
+  display: flex; flex-direction: column; gap: 8px; min-width: 240px;
+}
+.survey-form .form-title {
+  font-family: var(--serif); font-size: 16px; font-weight: 500;
+  color: var(--ink); margin-bottom: 4px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.survey-form label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--mute); font-weight: 600; display: block; margin-bottom: 2px;
+}
+.survey-form input, .survey-form select, .survey-form textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 2px; font-family: var(--mono); font-size: 12px;
+  background: white; color: var(--ink); box-sizing: border-box;
+}
+.survey-form input:focus, .survey-form select:focus, .survey-form textarea:focus {
+  outline: none; border-color: var(--signal);
+}
+.survey-form textarea { resize: vertical; min-height: 40px; }
+.survey-form .form-actions {
+  display: flex; gap: 6px; margin-top: 6px;
+  padding-top: 8px; border-top: 1px solid var(--line);
+}
+.survey-form button {
+  flex: 1; padding: 7px 10px; border-radius: 2px;
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--line); background: white; color: var(--ink);
+  transition: all 0.15s;
+}
+.survey-form button.primary { background: var(--ink); color: white; border-color: var(--ink); }
+.survey-form button.primary:hover { background: var(--signal); border-color: var(--signal); }
+.survey-form button.danger:hover { background: #c0392b; color: white; border-color: #c0392b; }
+
+/* Survey info panel — shown when drawing */
+.survey-hint {
+  position: absolute; top: 12px; right: 12px; z-index: 1001;
+  background: rgba(33, 43, 54, 0.92); color: white;
+  padding: 10px 14px; border-radius: 2px;
+  font-family: var(--mono); font-size: 11px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  max-width: 260px; display: none;
+  border-left: 3px solid #d68910;
+}
+.survey-hint.visible { display: block; animation: slide-in 0.2s ease-out; }
+@keyframes slide-in {
+  from { transform: translateX(10px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.survey-hint strong { color: #f1c40f; }
+
+/* Leaflet-draw styling override — matches editorial theme */
+.leaflet-draw-toolbar a {
+  background-color: white !important;
+  border-color: #d5dbe0 !important;
+}
+.leaflet-draw-actions a {
+  background-color: #212b36 !important;
+  color: white !important;
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.03em !important;
+}
+
+</style>
+</head>
+<body class="dash-body">
+
+<header class="dash-header">
+  <div class="wrap">
+    <h1><span class="brand-mark">◢◤</span>Dashboard Engineering · IWR Procesnavigator <span style="color:var(--signal);margin-left:12px">v10</span></h1>
+    <nav>
+      <a href="index.html">← Terug naar start</a>
+      <a href="assets/IWR_Procesnavigator_v10.xlsx" download>Download xlsx</a>
+    </nav>
+  </div>
+</header>
+
+<div class="dash-toolbar">
+  <div class="wrap">
+    <div class="tb-left">
+      <span class="tb-label">Data-bron:</span>
+      <div class="tb-source" id="sourceLabel"><strong>Demo-data</strong> · Maasstraat + 3 voorbeelden</div>
+    </div>
+    <div>
+      <button class="file-btn-secondary file-btn" onclick="loadDemo()">⟲ Demo-data laden</button>
+      <label class="file-btn" style="cursor:pointer;margin-left:8px">
+        📥 Eigen xlsx laden
+        <input type="file" accept=".xlsx,.xlsm" style="display:none" onchange="loadFile(event)">
+      </label>
+    </div>
+  </div>
+</div>
+
+<nav class="dash-tabs wrap" style="max-width:1180px;margin:0 auto;padding:0 32px">
+  <button class="tab tab-active" data-tab="po">Projectoverzicht <span class="tab-count" id="c-po">—</span></button>
+  <button class="tab" data-tab="dash">Dashboard Engineer <span class="tab-count" id="c-dash">—</span></button>
+  <button class="tab" data-tab="showstoppers">Vertragingen <span class="tab-count" id="c-ss">—</span></button>
+  <button class="tab" data-tab="kaart">🗺 Tracékaart <span class="tab-count" id="c-kaart">—</span></button>
+</nav>
+
+<main class="dash-main">
+  <div class="wrap">
+
+    <!-- Projectoverzicht -->
+    <section id="panel-po" class="panel panel-active">
+      <div id="po-grid" class="po-grid"></div>
+    </section>
+
+    <!-- Dashboard Engineer -->
+    <section id="panel-dash" class="panel">
+      <div class="ds-toolbar">
+        <select id="filter-project"><option value="">Alle projecten</option></select>
+        <select id="filter-hcat"><option value="">Alle hoofdcategorieën</option></select>
+        <select id="filter-status">
+          <option value="">Alle statussen</option>
+          <option>Nodig</option><option>Ingediend</option><option>Afgerond</option>
+          <option>Goedgekeurd</option><option>Afgewezen</option><option>N.v.t</option>
+        </select>
+        <input type="search" id="filter-search" placeholder="Zoek in type…" style="min-width:200px">
+        <div class="ds-count" id="ds-count">— rijen</div>
+      </div>
+      <div class="ds-table-wrap">
+        <table class="ds-table">
+          <thead><tr>
+            <th></th><th>Project</th><th>Hcat</th><th>Type</th>
+            <th>Route</th><th>Var</th><th class="c-num">Norm</th><th class="c-num">Buffer</th>
+            <th>Status</th><th>Uitgezet</th><th>Vereist gereed</th>
+            <th>Verwacht gereed</th><th>Impl. GSU</th>
+            <th class="c-num">Rest wd</th><th>Haalbaar</th>
+          </tr></thead>
+          <tbody id="ds-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Vertragingen -->
+    <section id="panel-showstoppers" class="panel">
+      <div class="ds-table-wrap">
+        <table class="ds-table">
+          <thead><tr>
+            <th></th><th>Project</th><th>Type</th><th>Status</th>
+            <th>Vereist gereed</th><th>Verwacht gereed</th>
+            <th>Slip (wd)</th><th>Haalbaar</th><th>Probleem</th>
+          </tr></thead>
+          <tbody id="ss-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tracékaart -->
+    <section id="panel-kaart" class="panel">
+
+      <div class="map-toolbar">
+        <span class="tb-label">Lagen toevoegen:</span>
+        <label class="map-btn" style="cursor:pointer">
+          📐 DXF / GeoJSON tracé
+          <input type="file" accept=".dxf,.geojson,.json,.kml" style="display:none" onchange="loadTraceFile(event)">
+        </label>
+        <label class="map-btn" style="cursor:pointer">
+          🏗 BDOK export
+          <input type="file" accept=".geojson,.json" style="display:none" onchange="loadBdokFile(event)">
+        </label>
+        <label class="map-btn" style="cursor:pointer">
+          🔌 Stedin liggingsdata
+          <input type="file" accept=".geojson,.json" style="display:none" onchange="loadStedinFile(event)">
+        </label>
+        <button class="map-btn" onclick="clearUploadedLayers()">✕ Lagen wissen</button>
+        <div class="upload-feedback" id="uploadFeedback">✓ Geladen</div>
+        <div style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--mute)">
+          Achtergrond: OpenStreetMap · BGT via PDOK · Gratis &amp; open
+        </div>
+      </div>
+
+      <div id="draw-debug" style="padding:8px 14px;background:#fffbea;border:1px solid #facc15;font-family:var(--mono);font-size:11px;color:#713f12;margin-bottom:8px;display:none">
+        <strong>⚠ DIAGNOSTIEK:</strong> <span id="draw-debug-msg"></span>
+      </div>
+
+      <div class="survey-toolbar">
+        <span class="tb-label">Intekenen:</span>
+        <button class="draw-btn" id="btn-draw-proefsleuf" onclick="startDrawProefsleuf()">
+          ▱ Proefsleuf tekenen
+        </button>
+        <button class="draw-btn" id="btn-draw-boring" onclick="startDrawBoring()">
+          ● Boring plaatsen
+        </button>
+        <button class="draw-btn secondary" onclick="exportSurveyGeoJSON()">
+          ⬇ Export GeoJSON
+        </button>
+        <button class="draw-btn secondary" onclick="exportSurveyCSV()">
+          ⬇ Export CSV
+        </button>
+        <label class="draw-btn secondary" style="cursor:pointer;margin:0">
+          ⬆ Import survey
+          <input type="file" accept=".geojson,.json" style="display:none" onchange="importSurveyFile(event)">
+        </label>
+        <button class="draw-btn secondary" onclick="clearSurvey()">✕ Wissen</button>
+        <div class="draw-count" id="draw-count">
+          <strong id="count-proefsleuven">0</strong> proefsleuven ·
+          <strong id="count-boringen">0</strong> boringen
+        </div>
+      </div>
+
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="survey-hint" id="survey-hint"></div>
+
+        <div class="map-layers">
+          <div class="map-layers-title">Achtergrondkaart</div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-osm" value="osm" checked onchange="switchBasemap(this.value)"><label for="bm-osm">OpenStreetMap</label></div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-lufo" value="lufo" onchange="switchBasemap(this.value)"><label for="bm-lufo">Luchtfoto (PDOK)</label></div>
+          <div class="layer-row"><input type="radio" name="basemap" id="bm-bgt" value="bgt" onchange="switchBasemap(this.value)"><label for="bm-bgt">BGT topografie (PDOK)</label></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:10px 0">
+          <div class="map-layers-title">Overlays</div>
+          <div class="layer-row"><input type="checkbox" id="lyr-proj" checked onchange="toggleLayer('projects', this.checked)"><label for="lyr-proj">Projectlocaties</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-trace" checked onchange="toggleLayer('trace', this.checked)"><label for="lyr-trace">Tracé</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-bdok" checked onchange="toggleLayer('bdok', this.checked)"><label for="lyr-bdok">BDOK bodemdata</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-stedin" checked onchange="toggleLayer('stedin', this.checked)"><label for="lyr-stedin">Stedin leidingen</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-proefsleuven" checked onchange="toggleLayer('proefsleuven', this.checked)"><label for="lyr-proefsleuven">Proefsleuven</label></div>
+          <div class="layer-row"><input type="checkbox" id="lyr-boringen" checked onchange="toggleLayer('boringen', this.checked)"><label for="lyr-boringen">Boringen</label></div>
+        </div>
+
+        <div class="map-legend">
+          <div class="map-legend-title">Projectstatus</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#2d8a4e"></div><span>Op koers</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#d68910"></div><span>Krap / let op</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#c0392b"></div><span>Slip &gt;5 wk</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#6a748a"></div><span>Onbekend</span></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+          <div class="legend-row"><div style="width:16px;height:3px;background:#2E75B6;flex-shrink:0;margin:4px 0"></div><span>Tracé</span></div>
+          <div class="legend-row"><div style="width:16px;height:3px;background:#d9651e;flex-shrink:0;margin:4px 0"></div><span>BDOK</span></div>
+          <div class="legend-row"><div style="width:16px;height:3px;background:#e74c3c;flex-shrink:0;margin:4px 0"></div><span>Stedin</span></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+          <div class="map-legend-title" style="margin-bottom:6px">Eigen survey</div>
+          <div class="legend-row"><div style="width:14px;height:10px;background:rgba(214,137,16,0.25);border:2px solid #d68910;flex-shrink:0"></div><span>Proefsleuf</span></div>
+          <div class="legend-row"><div style="width:10px;height:10px;background:#c0392b;border:2px solid white;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px #c0392b"></div><span>Boring</span></div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">DXF / GeoJSON tracé</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Exporteer vanuit AutoCAD als <strong>DXF</strong> of converteer naar GeoJSON. Tracé verschijnt als blauwe lijn. RD New coördinaten worden automatisch omgezet naar WGS84.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">BDOK bodemdata</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Exporteer GeoJSON vanuit <strong>bdok.nl</strong> voor bodemkwaliteit, verontreiniging, archeologie en explosieven. Laadt als oranje laag met klikbare properties.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Stedin liggingsdata</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Download gratis SHP van <strong>stedin.net/zakelijk/open-data</strong>. Converteer naar GeoJSON via <strong>mapshaper.org</strong> (gratis, geen account nodig).</p>
+        </div>
+      </div>
+
+      <div class="info-grid" style="margin-top:12px">
+        <div class="info-card" style="border-left:3px solid #d68910">
+          <div class="info-card-title">Proefsleuven intekenen</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Klik <strong>Proefsleuf tekenen</strong> en klik de hoekpunten op de kaart. Dubbelklik om af te sluiten. Voeg beschrijving, diepte en onderzoeksoort toe via het popup-formulier.</p>
+        </div>
+        <div class="info-card" style="border-left:3px solid #c0392b">
+          <div class="info-card-title">Boringen plaatsen</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Klik <strong>Boring plaatsen</strong> en klik op de gewenste locatie. Vul boring-ID, diepte en type in. Coördinaten worden automatisch vastgelegd.</p>
+        </div>
+        <div class="info-card" style="border-left:3px solid var(--signal)">
+          <div class="info-card-title">Export naar Excel</div>
+          <p style="font-size:13px;margin:0;color:var(--ink-2)">Exporteer alle intekeningen als <strong>GeoJSON</strong> (voor GIS) of <strong>CSV</strong> (voor Excel import). Data blijft lokaal — niets wordt geüpload.</p>
+        </div>
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<script>
+// ============================================================
+let DATA = null;
+let MAP  = null;
+let LAYERS = {};
+let BASEMAPS = {};
+
+const KNOWN_COORDS = {
+  'IRN24-0175': [51.8133, 4.6901],
+};
+const CITY_COORDS = {
+  'Rotterdam':             [51.9225, 4.4792],
+  'Dordrecht':             [51.8133, 4.6693],
+  'Capelle a/d IJssel':    [51.9333, 4.5833],
+  'Capelle aan den IJssel':[51.9333, 4.5833],
+  'Schiedam':              [51.9167, 4.4000],
+  'Vlaardingen':           [51.9128, 4.3425],
+  'Ridderkerk':            [51.8667, 4.6000],
+  'Barendrecht':           [51.8589, 4.5342],
+  'Spijkenisse':           [51.8500, 4.3333],
+};
+
+// ---------- MAP INIT ----------
+function initMap() {
+  if (MAP) return;
+  MAP = L.map('map', { zoomControl: true }).setView([51.88, 4.55], 11);
+
+  BASEMAPS.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19
+  }).addTo(MAP);
+
+  BASEMAPS.lufo = L.tileLayer(
+    'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho25/EPSG:3857/{z}/{x}/{y}.jpeg',
+    { attribution: '© PDOK Luchtfoto', maxZoom: 19 }
+  );
+
+  BASEMAPS.bgt = L.tileLayer.wms(
+    'https://service.pdok.nl/brt/achtergrondkaart/wms/v2_0',
+    { layers: 'standaard', format: 'image/png', transparent: true, attribution: '© PDOK BGT', maxZoom: 19 }
+  );
+
+  LAYERS.projects = L.layerGroup().addTo(MAP);
+  LAYERS.trace    = L.layerGroup().addTo(MAP);
+  LAYERS.bdok     = L.layerGroup().addTo(MAP);
+  LAYERS.stedin   = L.layerGroup().addTo(MAP);
+
+  // Diagnostic: log every click on the map
+  MAP.on('click', function(e) {
+    console.log('MAP click received at', e.latlng.lat.toFixed(5), e.latlng.lng.toFixed(5),
+                '| drawMode=', drawMode, '| handler=', drawHandler ? 'active' : 'none');
+  });
+
+  // Sprint 2: Survey layers + draw events (with load-check for leaflet-draw)
+  initSurveyLayers();
+  if (typeof L.Draw !== 'undefined') {
+    bindDrawEvents();
+  } else {
+    // Leaflet-draw still loading — retry until it's there
+    let retries = 0;
+    const drawCheck = setInterval(() => {
+      retries++;
+      if (typeof L.Draw !== 'undefined') {
+        clearInterval(drawCheck);
+        bindDrawEvents();
+      } else if (retries > 20) {  // 20 * 200ms = 4s timeout
+        clearInterval(drawCheck);
+        console.error('Leaflet-draw failed to load after 4s');
+      }
+    }, 200);
+  }
+}
+
+function switchBasemap(val) {
+  Object.values(BASEMAPS).forEach(b => { try { MAP.removeLayer(b); } catch(e){} });
+  BASEMAPS[val].addTo(MAP);
+}
+
+function toggleLayer(name, on) {
+  if (!LAYERS[name]) return;
+  on ? MAP.addLayer(LAYERS[name]) : MAP.removeLayer(LAYERS[name]);
+}
+
+// ---------- PROJECT MARKERS ----------
+function statusColor(delta) {
+  if (delta === null) return '#6a748a';
+  if (delta <= 0)  return '#2d8a4e';
+  if (delta <= 10) return '#d68910';
+  return '#c0392b';
+}
+
+function renderProjectMarkers() {
+  if (!MAP || !LAYERS.projects) return;
+  LAYERS.projects.clearLayers();
+  const projs = (DATA && DATA.projects) || [];
+  document.getElementById('c-kaart').textContent = projs.length;
+
+  const bounds = [];
+  projs.forEach(p => {
+    let coords = KNOWN_COORDS[p.ProjectID] || CITY_COORDS[p.Plaats] || [51.9, 4.5];
+    bounds.push(coords);
+
+    const items = (DATA.dashboard || []).filter(d => d.ProjectID === p.ProjectID);
+    let maxImpl = null;
+    items.forEach(i => {
+      const v = parseDate(i.Geimpliceerde_GSU);
+      if (v && (!maxImpl || v > maxImpl)) maxImpl = v;
+    });
+    const gsuOrig = parseDate(p.GSU_Datum);
+    let delta = (gsuOrig && maxImpl) ? workdaysBetween(gsuOrig, maxImpl) : null;
+
+    const color = statusColor(delta);
+    const slabel = delta === null ? 'Onbekend' : delta <= 0 ? '✓ Op koers' : delta <= 10 ? '⚠ Krap' : '🔴 Slip';
+    const deltaText = delta !== null
+      ? `<div class="popup-row"><span class="popup-label">Delta GSU</span><br><span class="popup-val">${delta >= 0 ? '+' : ''}${delta} werkdagen</span></div>` : '';
+
+    L.circleMarker(coords, {
+      radius: 13, fillColor: color, color: 'white', weight: 2.5, opacity: 1, fillOpacity: 0.92
+    })
+    .bindPopup(`
+      <div class="popup-name">${escapeHtml(p.Projectnaam||'—')}</div>
+      <div class="popup-row"><span class="popup-label">ProjectID</span><br><span class="popup-val">${escapeHtml(p.ProjectID||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">Route · Variant</span><br><span class="popup-val">${escapeHtml(p.Route||'')} · ${escapeHtml(p.Variant||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">Plaats</span><br><span class="popup-val">${escapeHtml(p.Plaats||'')}</span></div>
+      <div class="popup-row"><span class="popup-label">GSU origineel</span><br><span class="popup-val">${fmtDate(gsuOrig)}</span></div>
+      <div class="popup-row"><span class="popup-label">GSU verwacht</span><br><span class="popup-val">${fmtDate(maxImpl)}</span></div>
+      ${deltaText}
+      <div class="popup-row" style="margin-top:8px;font-size:14px">${slabel}</div>
+    `, { maxWidth: 280 })
+    .bindTooltip(`<strong>${p.Projectnaam}</strong><br>${slabel}`, { direction: 'top', offset: [0,-12] })
+    .addTo(LAYERS.projects);
+  });
+
+  if (bounds.length > 0) MAP.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
+}
+
+// ---------- FILE LOADERS ----------
+function loadTraceFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.trace.clearLayers();
+    const name = file.name.toLowerCase();
+    try {
+      if (name.endsWith('.geojson') || name.endsWith('.json')) {
+        const gj = JSON.parse(e.target.result);
+        L.geoJSON(gj, {
+          style: { color: '#2E75B6', weight: 3, opacity: 0.9 },
+          pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, fillColor: '#2E75B6', color: 'white', weight: 1.5, fillOpacity: 0.9 })
+        }).addTo(LAYERS.trace);
+      } else if (name.endsWith('.dxf')) {
+        parseDxf(e.target.result);
+      } else if (name.endsWith('.kml')) {
+        parseKml(e.target.result);
+      }
+      const b = LAYERS.trace.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('Tracé geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function loadBdokFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.bdok.clearLayers();
+    try {
+      const gj = JSON.parse(e.target.result);
+      L.geoJSON(gj, {
+        style: { color: '#d9651e', weight: 2, opacity: 0.85, fillOpacity: 0.2, fillColor: '#d9651e' },
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 6, fillColor: '#d9651e', color: 'white', weight: 1.5, fillOpacity: 0.85 }),
+        onEachFeature: (f, layer) => {
+          if (f.properties) {
+            const html = Object.entries(f.properties).filter(([k,v])=>v!==null&&v!=='').slice(0,8)
+              .map(([k,v])=>`<div class="popup-row"><span class="popup-label">${escapeHtml(k)}</span><br><span class="popup-val">${escapeHtml(String(v))}</span></div>`).join('');
+            if (html) layer.bindPopup(`<div style="font-family:var(--mono);font-size:12px">${html}</div>`, { maxWidth: 300 });
+          }
+        }
+      }).addTo(LAYERS.bdok);
+      const b = LAYERS.bdok.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('BDOK geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden BDOK: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function loadStedinFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    LAYERS.stedin.clearLayers();
+    try {
+      const gj = JSON.parse(e.target.result);
+      L.geoJSON(gj, {
+        style: { color: '#e74c3c', weight: 2, opacity: 0.8 },
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 4, fillColor: '#e74c3c', color: 'white', weight: 1, fillOpacity: 0.8 }),
+        onEachFeature: (f, layer) => {
+          if (f.properties) {
+            const html = Object.entries(f.properties).filter(([k,v])=>v!==null&&v!=='').slice(0,6)
+              .map(([k,v])=>`<div class="popup-row"><span class="popup-label">${escapeHtml(k)}</span><br><span class="popup-val">${escapeHtml(String(v))}</span></div>`).join('');
+            if (html) layer.bindPopup(`<div style="font-family:var(--mono);font-size:12px">${html}</div>`, { maxWidth: 260 });
+          }
+        }
+      }).addTo(LAYERS.stedin);
+      const b = LAYERS.stedin.getBounds();
+      if (b.isValid()) MAP.fitBounds(b, { padding: [32,32] });
+      showFeedback('Stedin data geladen: ' + file.name);
+    } catch(err) { alert('Fout bij laden Stedin: ' + err.message); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function clearUploadedLayers() {
+  ['trace','bdok','stedin'].forEach(k => LAYERS[k] && LAYERS[k].clearLayers());
+  showFeedback('Lagen gewist');
+}
+
+// ---------- DXF PARSER ----------
+function parseDxf(text) {
+  const ent = (text.match(/ENTITIES([\s\S]*?)ENDSEC/) || [])[1] || '';
+  // LWPOLYLINE
+  const polyRe = /LWPOLYLINE([\s\S]*?)(?=\n\s*0\s*\n)/g;
+  let m;
+  while ((m = polyRe.exec(ent)) !== null) {
+    const pts = [];
+    const ptRe = /^\s*10\r?\n\s*([\d.\-]+)\r?\n\s*20\r?\n\s*([\d.\-]+)/gm;
+    let pm;
+    while ((pm = ptRe.exec(m[1])) !== null) pts.push([parseFloat(pm[1]), parseFloat(pm[2])]);
+    if (pts.length > 1) {
+      const conv = pts.map(([x,y]) => isRd(x,y) ? rdToWgs(x,y) : [y,x]);
+      L.polyline(conv, { color: '#2E75B6', weight: 3, opacity: 0.9 }).addTo(LAYERS.trace);
+    }
+  }
+  // LINE entities
+  const lineRe = /LINE[\s\S]*?^\s*10\r?\n\s*([\d.\-]+)\r?\n\s*20\r?\n\s*([\d.\-]+)[\s\S]*?^\s*11\r?\n\s*([\d.\-]+)\r?\n\s*21\r?\n\s*([\d.\-]+)/gm;
+  while ((m = lineRe.exec(ent)) !== null) {
+    const x1=parseFloat(m[1]),y1=parseFloat(m[2]),x2=parseFloat(m[3]),y2=parseFloat(m[4]);
+    const p1 = isRd(x1,y1) ? rdToWgs(x1,y1) : [y1,x1];
+    const p2 = isRd(x2,y2) ? rdToWgs(x2,y2) : [y2,x2];
+    L.polyline([p1,p2], { color: '#2E75B6', weight: 2, opacity: 0.85 }).addTo(LAYERS.trace);
+  }
+}
+
+function isRd(x, y) { return x > 0 && x < 300000 && y > 300000 && y < 650000; }
+function rdToWgs(x, y) {
+  const dX = (x - 155000) / 100000, dY = (y - 463000) / 100000;
+  const lat = 52.15517440 + (3235.65389*dY - 32.58297*dX*dX - 0.24750*dY*dY) / 3600;
+  const lon = 5.38720621  + (5260.52916*dX + 105.94684*dX*dY + 2.45656*dX*dY*dY) / 3600;
+  return [lat, lon];
+}
+
+function parseKml(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  doc.querySelectorAll('coordinates').forEach(el => {
+    const pts = el.textContent.trim().split(/\s+/).map(c => {
+      const p = c.split(','); return [parseFloat(p[1]), parseFloat(p[0])];
+    }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+    if (pts.length > 1) L.polyline(pts, { color: '#2E75B6', weight: 3 }).addTo(LAYERS.trace);
+    else if (pts.length === 1) L.circleMarker(pts[0], { radius: 6, fillColor: '#2E75B6', color: 'white', weight: 1.5, fillOpacity: 0.9 }).addTo(LAYERS.trace);
+  });
+}
+
+function showFeedback(msg) {
+  const el = document.getElementById('uploadFeedback');
+  el.textContent = '✓ ' + msg; el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ============================================================
+// DATA LOADING
+// ============================================================
+async function loadDemo() {
+  try {
+    const r = await fetch('assets/demo-data.json');
+    DATA = await r.json();
+    document.getElementById('sourceLabel').innerHTML =
+      '<strong>Demo-data</strong> · Maasstraat + 3 voorbeelden · v' + (DATA.version||'10');
+    render();
+  } catch(e) { alert('Kon demo-data niet laden.'); }
+}
+
+async function loadFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array', cellDates:true });
+  function sheet(name) {
+    const ws = wb.Sheets[name]; if (!ws) return [];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, blankrows:false, raw:false, dateNF:'yyyy-mm-dd' });
+    if (rows.length < 4) return [];
+    const headers = rows[2];
+    return rows.slice(3).map(r => { const o={}; headers.forEach((h,i) => { if(h) o[h]=r[i]; }); return o; })
+      .filter(o => Object.values(o).some(v => v!==undefined && v!==''));
+  }
+  DATA = { version:'loaded', source:file.name, projects:sheet('Projecten'), dashboard:sheet('Dashboard_Engineer'), projectoverzicht:sheet('Projectoverzicht') };
+  document.getElementById('sourceLabel').innerHTML = '<strong>'+escapeHtml(file.name)+'</strong> · '+DATA.projects.length+' projecten';
+  render(); ev.target.value = '';
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  if (!DATA) return;
+  renderPO(); renderDash(); renderSS(); populateFilters();
+  if (MAP) renderProjectMarkers();
+}
+
+function renderPO() {
+  const grid = document.getElementById('po-grid');
+  grid.innerHTML = '';
+  const projs = DATA.projects || [];
+  document.getElementById('c-po').textContent = projs.length;
+  if (!projs.length) { grid.innerHTML='<div class="empty-state"><strong>Geen projecten</strong></div>'; return; }
+  projs.forEach(p => {
+    const items = (DATA.dashboard||[]).filter(d => d.ProjectID===p.ProjectID);
+    let gsuV=null, kritiek=null;
+    items.forEach(i => { const v=parseDate(i.Geimpliceerde_GSU); if(v&&(!gsuV||v>gsuV)){gsuV=v;kritiek=i.Type;} });
+    const gsuO = parseDate(p.GSU_Datum);
+    let dWd=null, dWk=null;
+    if (gsuO&&gsuV) { dWd=workdaysBetween(gsuO,gsuV); dWk=Math.round((dWd/5)*10)/10; }
+    let sc='grey', sl='Onbekend';
+    if (dWd!==null) { if(dWd<=0){sc='green';sl='✓ Op koers';} else if(dWd<=10){sc='amber';sl='⚠ Krap';} else if(dWd<=25){sc='amber';sl='🟠 Slip 2–5 wk';} else {sc='red';sl='🔴 Slip >5 wk';} }
+    const ap = items.filter(i=>i.Actiepunt===true||i.Actiepunt==='TRUE').length;
+    const ss = items.filter(i=>i.Showstopper_GSU===true||i.Showstopper_GSU==='TRUE'||i.Showstopper_Fase===true||i.Showstopper_Fase==='TRUE').length;
+    const card = document.createElement('div');
+    card.className = 'po-card po-card-'+sc;
+    card.innerHTML = `
+      <div class="po-hd">
+        <div><div class="po-id">${escapeHtml(p.ProjectID||'')}</div><h3 class="po-name">${escapeHtml(p.Projectnaam||'—')}</h3>
+        <div class="po-route"><strong>${escapeHtml(p.Route||'')}</strong> · ${escapeHtml(p.Variant||'')} · ${escapeHtml(p.Plaats||'')}</div></div>
+        <span class="po-status po-status-${sc}">${escapeHtml(sl)}</span>
+      </div>
+      <div class="po-dates">
+        <div class="po-date-block"><div class="po-date-lbl">GSU origineel</div><div class="po-date-val">${fmtDate(gsuO)}</div></div>
+        <div class="po-date-block po-date-verwacht"><div class="po-date-lbl">GSU verwacht</div><div class="po-date-val">${fmtDate(gsuV)}</div></div>
+      </div>
+      ${dWd!==null?`<div class="po-delta"><span class="po-delta-val">${dWd>=0?'+':''}${dWd} wd</span><span class="po-delta-lbl">= ${dWk} weken slip</span></div>`:''}
+      ${kritiek?`<div class="po-krit"><div class="po-krit-lbl">Kritiek item</div><div class="po-krit-val">${escapeHtml(kritiek)}</div></div>`:''}
+      <div class="po-krit" style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line-2);padding-top:12px">
+        <div><div class="po-krit-lbl">Items</div><div class="c-mono" style="font-weight:600">${items.length}</div></div>
+        <div><div class="po-krit-lbl">Actiepunten</div><div class="c-mono" style="font-weight:600;color:${ap>0?'var(--amber)':'var(--mute)'}">${ap}</div></div>
+        <div><div class="po-krit-lbl">Showstoppers</div><div class="c-mono" style="font-weight:600;color:${ss>0?'var(--red)':'var(--mute)'}">${ss}</div></div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderDash() {
+  const rows = DATA.dashboard||[];
+  document.getElementById('c-dash').textContent = rows.length;
+  const body = document.getElementById('ds-body'); body.innerHTML='';
+  const fp=document.getElementById('filter-project').value, fh=document.getElementById('filter-hcat').value,
+        fs=document.getElementById('filter-status').value, sr=document.getElementById('filter-search').value.toLowerCase();
+  const filt = rows.filter(r => {
+    if(fp&&r.ProjectID!==fp) return false;
+    if(fh&&r.Hoofdcategorie!==fh) return false;
+    if(fs&&r.Status!==fs) return false;
+    if(sr&&!(r.Type||'').toLowerCase().includes(sr)) return false;
+    return true;
+  });
+  document.getElementById('ds-count').textContent = filt.length+' van '+rows.length+' rijen';
+  if (!filt.length) { body.innerHTML='<tr><td colspan="15" class="empty-state" style="border:none">Geen rijen</td></tr>'; return; }
+  filt.forEach(r => {
+    const sl=slClass(r.Stoplicht), st=(r.Status||'').replace('.','');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sl ${sl}"></span></td><td class="c-id">${escapeHtml(r.ProjectID||'')}</td>
+      <td class="c-mono">${escapeHtml((r.Hoofdcategorie||'').split('-')[0])}</td>
+      <td class="c-type">${escapeHtml(r.Type||'')}</td>
+      <td class="c-mono">${escapeHtml(r.Route||'')}</td><td class="c-mono">${escapeHtml(r.Variant||'')}</td>
+      <td class="c-num">${num(r.Norm_Doorlooptijd_Wd)}</td><td class="c-num">${num(r.Buffer_Wd)}</td>
+      <td><span class="status-pill status-${st||'Nvt'}">${escapeHtml(r.Status||'—')}</span></td>
+      <td class="c-date">${fmtDate(parseDate(r.Datum_Uitgezet))}</td>
+      <td class="c-date">${fmtDate(parseDate(r.Vereiste_Gereed_Datum))}</td>
+      <td class="c-date">${fmtDate(parseDate(r.Verwacht_Gereed_Datum))}</td>
+      <td class="c-date"><strong>${fmtDate(parseDate(r.Geimpliceerde_GSU))}</strong></td>
+      <td class="c-num">${num(r.Resterende_Wd)}</td>
+      <td><span class="haalbaar-${r.Haalbaar_GSU||''}">${escapeHtml(r.Haalbaar_GSU||'—')}</span></td>`;
+    body.appendChild(tr);
+  });
+}
+
+function renderSS() {
+  const rows = DATA.dashboard||[];
+  const issues = rows.filter(r => {
+    const isAP=r.Actiepunt===true||r.Actiepunt==='TRUE';
+    const isSS=r.Showstopper_GSU===true||r.Showstopper_GSU==='TRUE'||r.Showstopper_Fase===true||r.Showstopper_Fase==='TRUE';
+    const rest=typeof r.Resterende_Wd==='number'?r.Resterende_Wd:parseFloat(r.Resterende_Wd);
+    return isAP||isSS||(!isNaN(rest)&&rest<0);
+  });
+  document.getElementById('c-ss').textContent=issues.length;
+  const body=document.getElementById('ss-body'); body.innerHTML='';
+  if (!issues.length) { body.innerHTML='<tr><td colspan="9" class="empty-state" style="border:none"><strong>Geen vertragingen</strong></td></tr>'; return; }
+  issues.forEach(r => {
+    const sl=slClass(r.Stoplicht), vr=parseDate(r.Vereiste_Gereed_Datum), vw=parseDate(r.Verwacht_Gereed_Datum);
+    const slip=(vr&&vw)?workdaysBetween(vr,vw):null;
+    let prob=[];
+    if(r.Showstopper_GSU===true||r.Showstopper_GSU==='TRUE') prob.push('GSU onhaalbaar');
+    if(r.Showstopper_Fase===true||r.Showstopper_Fase==='TRUE') prob.push('Fasegate overtijd');
+    if(r.Actiepunt===true||r.Actiepunt==='TRUE') prob.push('Actiepunt');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="sl ${sl}"></span></td><td class="c-id">${escapeHtml(r.ProjectID||'')}</td>
+      <td class="c-type">${escapeHtml(r.Type||'')}</td>
+      <td><span class="status-pill status-${(r.Status||'').replace('.','')}">${escapeHtml(r.Status||'—')}</span></td>
+      <td class="c-date">${fmtDate(vr)}</td><td class="c-date">${fmtDate(vw)}</td>
+      <td class="c-num"><strong>${slip!==null?(slip>=0?'+':'')+slip:'—'}</strong></td>
+      <td><span class="haalbaar-${r.Haalbaar_GSU||''}">${escapeHtml(r.Haalbaar_GSU||'—')}</span></td>
+      <td>${prob.map(p=>`<span class="status-pill" style="background:var(--paper-2);color:var(--red);margin-right:4px">${p}</span>`).join('')}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function populateFilters() {
+  const rows=DATA.dashboard||[];
+  const fill=(id,vals)=>{ const s=document.getElementById(id),cur=s.value,first=s.querySelector('option'); s.innerHTML=''; s.appendChild(first); [...new Set(vals.filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);}); s.value=cur; };
+  fill('filter-project',rows.map(r=>r.ProjectID));
+  fill('filter-hcat',rows.map(r=>r.Hoofdcategorie));
+}
+
+// TABS
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('tab-active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('panel-active'));
+    t.classList.add('tab-active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('panel-active');
+    if (t.dataset.tab==='kaart') {
+      setTimeout(() => { initMap(); MAP.invalidateSize(); if(DATA) renderProjectMarkers(); }, 50);
+    }
+  });
+});
+['filter-project','filter-hcat','filter-status','filter-search'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderDash);
+});
+
+// HELPERS
+function parseDate(v){if(!v)return null;if(v instanceof Date)return isNaN(v)?null:v;const s=String(v);const m1=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m1){const d=new Date(+m1[1],+m1[2]-1,+m1[3]);return isNaN(d)?null:d;}const m2=s.match(/^(\d{2})-(\d{2})-(\d{4})/);if(m2){const d=new Date(+m2[3],+m2[2]-1,+m2[1]);return isNaN(d)?null:d;}return null;}
+function fmtDate(d){if(!d)return'<span style="color:var(--mute)">—</span>';return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();}
+function workdaysBetween(a,b){if(!a||!b)return null;const s=a<b?a:b,e=a<b?b:a,sg=a<b?1:-1;let c=0;const cur=new Date(s);while(cur<e){const d=cur.getDay();if(d!==0&&d!==6)c++;cur.setDate(cur.getDate()+1);}return sg*c;}
+function slClass(v){if(!v)return'sl-grey';if(v.includes('🔴'))return'sl-red';if(v.includes('🟠'))return'sl-amber';if(v.includes('🟢'))return'sl-green';return'sl-grey';}
+function num(v){if(v===null||v===undefined||v==='')return'<span style="color:var(--mute)">—</span>';const n=typeof v==='number'?v:parseFloat(v);return isNaN(n)?escapeHtml(String(v)):n;}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+
+// ============================================================
+// SPRINT 2 — SURVEY TOOLS (Proefsleuven + Boringen)
+// ============================================================
+let SURVEY = {
+  proefsleuven: [],  // {id, naam, diepte, onderzoek, opmerking, coords, layer}
+  boringen:     []   // {id, naam, diepte, type, opmerking, lat, lng, layer}
+};
+let drawHandler = null;
+let drawMode = null;  // 'proefsleuf' | 'boring' | null
+
+function initSurveyLayers() {
+  if (!LAYERS.proefsleuven) LAYERS.proefsleuven = L.layerGroup().addTo(MAP);
+  if (!LAYERS.boringen)     LAYERS.boringen     = L.layerGroup().addTo(MAP);
+  loadSurveyFromStorage();
+}
+
+// ---------- HINT display ----------
+function showHint(html) {
+  const h = document.getElementById('survey-hint');
+  h.innerHTML = html;
+  h.classList.add('visible');
+}
+function hideHint() {
+  const h = document.getElementById('survey-hint');
+  h.classList.remove('visible');
+}
+
+
+// ---------- DEBUG STRIP ----------
+function showDebugStrip(msg) {
+  const strip = document.getElementById('draw-debug');
+  const m = document.getElementById('draw-debug-msg');
+  if (strip && m) {
+    strip.style.display = 'block';
+    m.textContent = msg;
+    console.error('DRAW DEBUG:', msg);
+  }
+}
+
+// ---------- DRAW PROEFSLEUF ----------
+function startDrawProefsleuf() {
+  // Diagnostic
+  const debug = [];
+  debug.push('MAP=' + (MAP ? 'OK' : 'MISSING'));
+  debug.push('L.Draw=' + (typeof L.Draw !== 'undefined' ? 'OK' : 'MISSING'));
+  debug.push('L.Draw.Polygon=' + (typeof L.Draw !== 'undefined' && L.Draw.Polygon ? 'OK' : 'MISSING'));
+  debug.push('Events=' + (window._drawStatus || 'NOT_BOUND'));
+  console.log('startDrawProefsleuf diagnostic:', debug.join(' | '));
+
+  if (!MAP) {
+    showDebugStrip('Kaart niet geladen.');
+    return;
+  }
+  if (typeof L.Draw === 'undefined' || !L.Draw.Polygon) {
+    showDebugStrip('Leaflet-draw bibliotheek NIET geladen. Status: ' + debug.join(' | '));
+    return;
+  }
+  if (window._drawStatus !== 'BOUND_OK') {
+    showDebugStrip('Draw events niet gebonden. Vernieuw pagina (Ctrl+F5).');
+    return;
+  }
+  stopDrawing();
+  drawMode = 'proefsleuf';
+  document.getElementById('btn-draw-proefsleuf').classList.add('active');
+  showHint('Teken een <strong>proefsleuf</strong><br>Klik de hoekpunten. <strong>Klik op eerste punt</strong> of <strong>dubbelklik</strong> om af te sluiten. <strong>Esc</strong> om te annuleren.');
+
+  try {
+    drawHandler = new L.Draw.Polygon(MAP, {
+      allowIntersection: true,
+      shapeOptions: {
+        color: '#d68910',
+        weight: 2,
+        fillColor: '#d68910',
+        fillOpacity: 0.25
+      },
+      showArea: false,
+      metric: true,
+      repeatMode: false
+    });
+    drawHandler.enable();
+  } catch(err) {
+    console.error('Draw polygon failed:', err);
+    alert('Kan tekenen niet starten: ' + err.message);
+    stopDrawing();
+  }
+}
+
+// ---------- DRAW BORING ----------
+function startDrawBoring() {
+  // Diagnostic
+  const debug = [];
+  debug.push('MAP=' + (MAP ? 'OK' : 'MISSING'));
+  debug.push('L.Draw=' + (typeof L.Draw !== 'undefined' ? 'OK' : 'MISSING'));
+  debug.push('L.Draw.Marker=' + (typeof L.Draw !== 'undefined' && L.Draw.Marker ? 'OK' : 'MISSING'));
+  debug.push('Events=' + (window._drawStatus || 'NOT_BOUND'));
+  console.log('startDrawBoring diagnostic:', debug.join(' | '));
+
+  if (!MAP) {
+    showDebugStrip('Kaart niet geladen. MAP=' + MAP);
+    return;
+  }
+  if (typeof L.Draw === 'undefined' || !L.Draw.Marker) {
+    showDebugStrip('Leaflet-draw bibliotheek NIET geladen. Check netwerk/adblocker. Status: ' + debug.join(' | '));
+    return;
+  }
+  if (window._drawStatus !== 'BOUND_OK') {
+    showDebugStrip('Draw events niet gebonden. Probeer pagina te vernieuwen (Ctrl+F5).');
+    return;
+  }
+  stopDrawing();
+  drawMode = 'boring';
+  document.getElementById('btn-draw-boring').classList.add('active');
+  showHint('Plaats een <strong>boring</strong><br>Klik op de locatie waar de boring moet komen. <strong>Esc</strong> om te annuleren.');
+
+  try {
+    drawHandler = new L.Draw.Marker(MAP, {
+      icon: L.divIcon({
+        className: 'boring-marker-icon',
+        html: '<div class="boring-marker"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      }),
+      repeatMode: false
+    });
+    drawHandler.enable();
+  } catch(err) {
+    console.error('Draw marker failed:', err);
+    alert('Kan boring plaatsen niet starten: ' + err.message);
+    stopDrawing();
+  }
+}
+
+function stopDrawing() {
+  if (drawHandler) {
+    try { drawHandler.disable(); } catch(e) { console.warn('disable() failed:', e); }
+    drawHandler = null;
+  }
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  hideHint();
+  drawMode = null;
+}
+
+// Listen for Leaflet-draw events after map init
+function bindDrawEvents() {
+  // Sanity check — Leaflet-draw must be loaded before we bind
+  if (typeof L.Draw === 'undefined' || typeof L.Draw.Event === 'undefined') {
+    console.warn('Leaflet-draw not yet loaded — retry in 300ms');
+    setTimeout(bindDrawEvents, 300);
+    return;
+  }
+
+  MAP.on(L.Draw.Event.CREATED, e => {
+    const layer = e.layer;
+    const currentMode = drawMode;  // capture before stopDrawing resets it
+    if (currentMode === 'proefsleuf') {
+      handleProefsleufCreated(layer);
+    } else if (currentMode === 'boring') {
+      handleBoringCreated(layer);
+    }
+    // Reset button state but layer is already added to the right group
+    stopDrawing();
+  });
+
+  // Escape to cancel — gebruik event.type ipv key voor breedere browser-support
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'Escape' || e.keyCode === 27) && drawHandler) {
+      stopDrawing();
+    }
+  });
+
+  console.log('✓ Draw events bound successfully');
+  // Also show status in the hint area so user sees it even without F12
+  window._drawStatus = 'BOUND_OK';
+}
+
+// ---------- PROEFSLEUF handling ----------
+function handleProefsleufCreated(layer) {
+  const coords = layer.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
+  const id = 'PS-' + Date.now().toString(36).toUpperCase().slice(-5);
+  const rec = {
+    id: id, naam: id, diepte: '', onderzoek: 'Proefsleuf',
+    opmerking: '', coords: coords, created: new Date().toISOString()
+  };
+
+  layer.setStyle({ color: '#d68910', weight: 2, fillColor: '#d68910', fillOpacity: 0.25 });
+  rec.layer = layer;
+  LAYERS.proefsleuven.addLayer(layer);
+  SURVEY.proefsleuven.push(rec);
+
+  bindProefsleufPopup(rec);
+  // Auto-open popup for immediate editing
+  setTimeout(() => layer.openPopup(), 50);
+
+  updateSurveyCounts();
+  saveSurveyToStorage();
+}
+
+function bindProefsleufPopup(rec) {
+  const content = () => `
+    <div class="survey-form">
+      <div class="form-title">Proefsleuf ${escapeHtml(rec.id)}</div>
+      <div>
+        <label>Naam / kenmerk</label>
+        <input type="text" value="${escapeHtml(rec.naam||'')}" id="ps-${rec.id}-naam" placeholder="bijv. PS-Noord">
+      </div>
+      <div>
+        <label>Geplande diepte (m)</label>
+        <input type="number" step="0.1" value="${escapeHtml(rec.diepte||'')}" id="ps-${rec.id}-diepte" placeholder="1.5">
+      </div>
+      <div>
+        <label>Onderzoek</label>
+        <select id="ps-${rec.id}-ond">
+          <option${rec.onderzoek==='Proefsleuf'?' selected':''}>Proefsleuf</option>
+          <option${rec.onderzoek==='Kruisingsdetectie'?' selected':''}>Kruisingsdetectie</option>
+          <option${rec.onderzoek==='Kabel/leiding traject'?' selected':''}>Kabel/leiding traject</option>
+          <option${rec.onderzoek==='Archeologisch proefvak'?' selected':''}>Archeologisch proefvak</option>
+          <option${rec.onderzoek==='Bodemkundig'?' selected':''}>Bodemkundig</option>
+          <option${rec.onderzoek==='Anders'?' selected':''}>Anders</option>
+        </select>
+      </div>
+      <div>
+        <label>Opmerking</label>
+        <textarea id="ps-${rec.id}-opm" rows="2">${escapeHtml(rec.opmerking||'')}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="primary" onclick="saveProefsleuf('${rec.id}')">✓ Opslaan</button>
+        <button class="danger" onclick="deleteProefsleuf('${rec.id}')">✕ Verwijderen</button>
+      </div>
+    </div>`;
+
+  rec.layer.bindPopup(content, { maxWidth: 320, minWidth: 280 });
+  rec.layer.on('popupopen', () => {
+    rec.layer.setPopupContent(content());
+  });
+}
+
+window.saveProefsleuf = function(id) {
+  const rec = SURVEY.proefsleuven.find(p => p.id === id);
+  if (!rec) return;
+  rec.naam      = document.getElementById(`ps-${id}-naam`).value.trim() || rec.id;
+  rec.diepte    = document.getElementById(`ps-${id}-diepte`).value;
+  rec.onderzoek = document.getElementById(`ps-${id}-ond`).value;
+  rec.opmerking = document.getElementById(`ps-${id}-opm`).value.trim();
+  rec.layer.bindTooltip(rec.naam + (rec.diepte ? ` · ${rec.diepte}m` : ''), { direction: 'top', sticky: true });
+  rec.layer.closePopup();
+  saveSurveyToStorage();
+  showFeedback(`✓ ${rec.naam} opgeslagen`);
+};
+
+window.deleteProefsleuf = function(id) {
+  const idx = SURVEY.proefsleuven.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  if (!confirm(`Proefsleuf ${SURVEY.proefsleuven[idx].naam} verwijderen?`)) return;
+  LAYERS.proefsleuven.removeLayer(SURVEY.proefsleuven[idx].layer);
+  SURVEY.proefsleuven.splice(idx, 1);
+  updateSurveyCounts();
+  saveSurveyToStorage();
+};
+
+// ---------- BORING handling ----------
+function handleBoringCreated(layer) {
+  const ll = layer.getLatLng();
+  const id = 'BR-' + Date.now().toString(36).toUpperCase().slice(-5);
+  const rec = {
+    id: id, naam: id, diepte: '', type: 'Handboring',
+    opmerking: '', lat: ll.lat, lng: ll.lng, created: new Date().toISOString()
+  };
+  rec.layer = layer;
+  LAYERS.boringen.addLayer(layer);
+  SURVEY.boringen.push(rec);
+
+  bindBoringPopup(rec);
+  setTimeout(() => layer.openPopup(), 50);
+
+  updateSurveyCounts();
+  saveSurveyToStorage();
+}
+
+function bindBoringPopup(rec) {
+  const content = () => `
+    <div class="survey-form">
+      <div class="form-title">Boring ${escapeHtml(rec.id)}</div>
+      <div>
+        <label>Boring-ID / kenmerk</label>
+        <input type="text" value="${escapeHtml(rec.naam||'')}" id="br-${rec.id}-naam" placeholder="bijv. B-01">
+      </div>
+      <div>
+        <label>Diepte (m-mv)</label>
+        <input type="number" step="0.1" value="${escapeHtml(rec.diepte||'')}" id="br-${rec.id}-diepte" placeholder="3.0">
+      </div>
+      <div>
+        <label>Type</label>
+        <select id="br-${rec.id}-type">
+          <option${rec.type==='Handboring'?' selected':''}>Handboring</option>
+          <option${rec.type==='Mechanische boring'?' selected':''}>Mechanische boring</option>
+          <option${rec.type==='Sondering (CPT)'?' selected':''}>Sondering (CPT)</option>
+          <option${rec.type==='Peilbuis'?' selected':''}>Peilbuis</option>
+          <option${rec.type==='Puur (chemisch)'?' selected':''}>Puur (chemisch)</option>
+          <option${rec.type==='Kernboring'?' selected':''}>Kernboring</option>
+          <option${rec.type==='Anders'?' selected':''}>Anders</option>
+        </select>
+      </div>
+      <div>
+        <label>Opmerking</label>
+        <textarea id="br-${rec.id}-opm" rows="2">${escapeHtml(rec.opmerking||'')}</textarea>
+      </div>
+      <div style="font-size:10px;color:var(--mute);font-family:var(--mono);padding-top:4px">
+        ${rec.lat.toFixed(5)}°N · ${rec.lng.toFixed(5)}°E
+      </div>
+      <div class="form-actions">
+        <button class="primary" onclick="saveBoring('${rec.id}')">✓ Opslaan</button>
+        <button class="danger" onclick="deleteBoring('${rec.id}')">✕ Verwijderen</button>
+      </div>
+    </div>`;
+  rec.layer.bindPopup(content, { maxWidth: 300, minWidth: 260 });
+  rec.layer.on('popupopen', () => {
+    rec.layer.setPopupContent(content());
+  });
+}
+
+window.saveBoring = function(id) {
+  const rec = SURVEY.boringen.find(b => b.id === id);
+  if (!rec) return;
+  rec.naam      = document.getElementById(`br-${id}-naam`).value.trim() || rec.id;
+  rec.diepte    = document.getElementById(`br-${id}-diepte`).value;
+  rec.type      = document.getElementById(`br-${id}-type`).value;
+  rec.opmerking = document.getElementById(`br-${id}-opm`).value.trim();
+  rec.layer.bindTooltip(rec.naam + (rec.diepte ? ` · ${rec.diepte}m` : ''), { direction: 'top', offset: [0,-8] });
+  rec.layer.closePopup();
+  saveSurveyToStorage();
+  showFeedback(`✓ ${rec.naam} opgeslagen`);
+};
+
+window.deleteBoring = function(id) {
+  const idx = SURVEY.boringen.findIndex(b => b.id === id);
+  if (idx < 0) return;
+  if (!confirm(`Boring ${SURVEY.boringen[idx].naam} verwijderen?`)) return;
+  LAYERS.boringen.removeLayer(SURVEY.boringen[idx].layer);
+  SURVEY.boringen.splice(idx, 1);
+  updateSurveyCounts();
+  saveSurveyToStorage();
+};
+
+// ---------- COUNTS / UI ----------
+function updateSurveyCounts() {
+  document.getElementById('count-proefsleuven').textContent = SURVEY.proefsleuven.length;
+  document.getElementById('count-boringen').textContent     = SURVEY.boringen.length;
+}
+
+// ---------- PERSISTENCE (in-memory, NOT localStorage per spec) ----------
+// Use a module-level variable that persists for the session
+let _surveyMemory = null;
+function saveSurveyToStorage() {
+  _surveyMemory = {
+    proefsleuven: SURVEY.proefsleuven.map(p => ({
+      id: p.id, naam: p.naam, diepte: p.diepte, onderzoek: p.onderzoek,
+      opmerking: p.opmerking, coords: p.coords, created: p.created
+    })),
+    boringen: SURVEY.boringen.map(b => ({
+      id: b.id, naam: b.naam, diepte: b.diepte, type: b.type,
+      opmerking: b.opmerking, lat: b.lat, lng: b.lng, created: b.created
+    }))
+  };
+}
+function loadSurveyFromStorage() {
+  if (!_surveyMemory) { updateSurveyCounts(); return; }
+  _surveyMemory.proefsleuven.forEach(p => {
+    const poly = L.polygon(p.coords, { color: '#d68910', weight: 2, fillColor: '#d68910', fillOpacity: 0.25 });
+    const rec = { ...p, layer: poly };
+    LAYERS.proefsleuven.addLayer(poly);
+    SURVEY.proefsleuven.push(rec);
+    bindProefsleufPopup(rec);
+    if (rec.naam) poly.bindTooltip(rec.naam + (rec.diepte ? ` · ${rec.diepte}m` : ''), { direction: 'top', sticky: true });
+  });
+  _surveyMemory.boringen.forEach(b => {
+    const mk = L.marker([b.lat, b.lng], {
+      icon: L.divIcon({
+        className: 'boring-marker-icon',
+        html: '<div class="boring-marker"></div>',
+        iconSize: [20, 20], iconAnchor: [10, 10]
+      })
+    });
+    const rec = { ...b, layer: mk };
+    LAYERS.boringen.addLayer(mk);
+    SURVEY.boringen.push(rec);
+    bindBoringPopup(rec);
+    if (rec.naam) mk.bindTooltip(rec.naam + (rec.diepte ? ` · ${rec.diepte}m` : ''), { direction: 'top', offset: [0,-8] });
+  });
+  updateSurveyCounts();
+}
+
+// ---------- EXPORT GeoJSON ----------
+function exportSurveyGeoJSON() {
+  if (!SURVEY.proefsleuven.length && !SURVEY.boringen.length) {
+    alert('Geen survey-data om te exporteren. Teken eerst proefsleuven of plaats boringen.');
+    return;
+  }
+  const features = [];
+  SURVEY.proefsleuven.forEach(p => {
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [p.coords.map(c => [c[1], c[0]])]  // GeoJSON is [lng, lat]
+      },
+      properties: {
+        feature_type: 'proefsleuf',
+        id: p.id, naam: p.naam, diepte_m: p.diepte,
+        onderzoek: p.onderzoek, opmerking: p.opmerking, created: p.created
+      }
+    });
+  });
+  SURVEY.boringen.forEach(b => {
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
+      properties: {
+        feature_type: 'boring',
+        id: b.id, naam: b.naam, diepte_m: b.diepte,
+        type: b.type, opmerking: b.opmerking, created: b.created
+      }
+    });
+  });
+  const gj = { type: 'FeatureCollection', features: features };
+  downloadFile(JSON.stringify(gj, null, 2), 'survey_' + Date.now() + '.geojson', 'application/geo+json');
+  showFeedback(`✓ ${features.length} objecten geëxporteerd als GeoJSON`);
+}
+
+// ---------- EXPORT CSV (Excel-friendly) ----------
+function exportSurveyCSV() {
+  if (!SURVEY.proefsleuven.length && !SURVEY.boringen.length) {
+    alert('Geen survey-data om te exporteren.');
+    return;
+  }
+  const rows = [['type','id','naam','lat','lng','diepte_m','soort','opmerking','created']];
+  SURVEY.proefsleuven.forEach(p => {
+    const centroid = centroidOf(p.coords);
+    rows.push(['proefsleuf', p.id, p.naam, centroid[0].toFixed(6), centroid[1].toFixed(6),
+               p.diepte, p.onderzoek, p.opmerking, p.created]);
+  });
+  SURVEY.boringen.forEach(b => {
+    rows.push(['boring', b.id, b.naam, b.lat.toFixed(6), b.lng.toFixed(6),
+               b.diepte, b.type, b.opmerking, b.created]);
+  });
+  const csv = rows.map(r => r.map(v => {
+    const s = String(v ?? '');
+    return /[,;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(';')).join('\n');
+  // Add UTF-8 BOM so Excel opens correctly
+  downloadFile('\uFEFF' + csv, 'survey_' + Date.now() + '.csv', 'text/csv;charset=utf-8');
+  showFeedback(`✓ ${rows.length - 1} rijen geëxporteerd als CSV`);
+}
+
+function centroidOf(coords) {
+  const lats = coords.map(c => c[0]);
+  const lngs = coords.map(c => c[1]);
+  return [lats.reduce((a,b)=>a+b,0)/lats.length, lngs.reduce((a,b)=>a+b,0)/lngs.length];
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- IMPORT ----------
+function importSurveyFile(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const gj = JSON.parse(e.target.result);
+      if (!gj.features) throw new Error('Geen GeoJSON FeatureCollection');
+      let psCount = 0, brCount = 0;
+      gj.features.forEach(f => {
+        const p = f.properties || {};
+        if (f.geometry.type === 'Polygon' && (p.feature_type === 'proefsleuf' || !p.feature_type)) {
+          const coords = f.geometry.coordinates[0].map(c => [c[1], c[0]]);
+          const rec = {
+            id: p.id || ('PS-' + Math.random().toString(36).slice(2,7).toUpperCase()),
+            naam: p.naam || p.id || 'Geïmporteerd',
+            diepte: p.diepte_m || p.diepte || '',
+            onderzoek: p.onderzoek || 'Proefsleuf',
+            opmerking: p.opmerking || '',
+            coords: coords,
+            created: p.created || new Date().toISOString()
+          };
+          const poly = L.polygon(coords, { color: '#d68910', weight: 2, fillColor: '#d68910', fillOpacity: 0.25 });
+          rec.layer = poly;
+          LAYERS.proefsleuven.addLayer(poly);
+          SURVEY.proefsleuven.push(rec);
+          bindProefsleufPopup(rec);
+          if (rec.naam) poly.bindTooltip(rec.naam, { direction: 'top', sticky: true });
+          psCount++;
+        } else if (f.geometry.type === 'Point' && (p.feature_type === 'boring' || !p.feature_type)) {
+          const [lng, lat] = f.geometry.coordinates;
+          const rec = {
+            id: p.id || ('BR-' + Math.random().toString(36).slice(2,7).toUpperCase()),
+            naam: p.naam || p.id || 'Geïmporteerd',
+            diepte: p.diepte_m || p.diepte || '',
+            type: p.type || 'Handboring',
+            opmerking: p.opmerking || '',
+            lat, lng,
+            created: p.created || new Date().toISOString()
+          };
+          const mk = L.marker([lat, lng], {
+            icon: L.divIcon({
+              className: 'boring-marker-icon',
+              html: '<div class="boring-marker"></div>',
+              iconSize: [20, 20], iconAnchor: [10, 10]
+            })
+          });
+          rec.layer = mk;
+          LAYERS.boringen.addLayer(mk);
+          SURVEY.boringen.push(rec);
+          bindBoringPopup(rec);
+          if (rec.naam) mk.bindTooltip(rec.naam, { direction: 'top', offset: [0,-8] });
+          brCount++;
+        }
+      });
+      updateSurveyCounts();
+      saveSurveyToStorage();
+      showFeedback(`✓ Geïmporteerd: ${psCount} proefsleuven · ${brCount} boringen`);
+
+      // Zoom naar geïmporteerde data
+      const group = L.featureGroup([LAYERS.proefsleuven, LAYERS.boringen]);
+      const bounds = group.getBounds();
+      if (bounds.isValid()) MAP.fitBounds(bounds, { padding: [40, 40] });
+    } catch(err) {
+      alert('Import mislukt: ' + err.message);
+    }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ---------- CLEAR ----------
+function clearSurvey() {
+  if (!SURVEY.proefsleuven.length && !SURVEY.boringen.length) return;
+  if (!confirm(`Alle ${SURVEY.proefsleuven.length + SURVEY.boringen.length} intekeningen wissen?`)) return;
+  LAYERS.proefsleuven.clearLayers();
+  LAYERS.boringen.clearLayers();
+  SURVEY.proefsleuven = [];
+  SURVEY.boringen = [];
+  updateSurveyCounts();
+  saveSurveyToStorage();
+}
+
+
+loadDemo();
+</script>
+</body>
+</html>
