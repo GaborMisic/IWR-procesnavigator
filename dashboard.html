@@ -441,9 +441,24 @@ function initMap() {
   LAYERS.bdok     = L.layerGroup().addTo(MAP);
   LAYERS.stedin   = L.layerGroup().addTo(MAP);
 
-  // Sprint 2: Survey layers + draw events
+  // Sprint 2: Survey layers + draw events (with load-check for leaflet-draw)
   initSurveyLayers();
-  bindDrawEvents();
+  if (typeof L.Draw !== 'undefined') {
+    bindDrawEvents();
+  } else {
+    // Leaflet-draw still loading — retry until it's there
+    let retries = 0;
+    const drawCheck = setInterval(() => {
+      retries++;
+      if (typeof L.Draw !== 'undefined') {
+        clearInterval(drawCheck);
+        bindDrawEvents();
+      } else if (retries > 20) {  // 20 * 200ms = 4s timeout
+        clearInterval(drawCheck);
+        console.error('Leaflet-draw failed to load after 4s');
+      }
+    }, 200);
+  }
 }
 
 function switchBasemap(val) {
@@ -851,40 +866,72 @@ function hideHint() {
 
 // ---------- DRAW PROEFSLEUF ----------
 function startDrawProefsleuf() {
-  if (!MAP) return;
+  if (!MAP) { alert('Kaart nog niet geladen. Even wachten.'); return; }
+  if (typeof L.Draw === 'undefined' || !L.Draw.Polygon) {
+    alert('Leaflet-draw is niet geladen. Vernieuw de pagina (Ctrl+F5).');
+    return;
+  }
   stopDrawing();
   drawMode = 'proefsleuf';
   document.getElementById('btn-draw-proefsleuf').classList.add('active');
-  showHint('Teken een <strong>proefsleuf</strong><br>Klik de hoekpunten. <strong>Dubbelklik</strong> om af te sluiten. <strong>Esc</strong> om te annuleren.');
+  showHint('Teken een <strong>proefsleuf</strong><br>Klik de hoekpunten. <strong>Klik op eerste punt</strong> of <strong>dubbelklik</strong> om af te sluiten. <strong>Esc</strong> om te annuleren.');
 
-  drawHandler = new L.Draw.Polygon(MAP, {
-    allowIntersection: false,
-    shapeOptions: { color: '#d68910', weight: 2, fillColor: '#d68910', fillOpacity: 0.25 },
-    showArea: false
-  });
-  drawHandler.enable();
+  try {
+    drawHandler = new L.Draw.Polygon(MAP, {
+      allowIntersection: true,
+      shapeOptions: {
+        color: '#d68910',
+        weight: 2,
+        fillColor: '#d68910',
+        fillOpacity: 0.25
+      },
+      showArea: false,
+      metric: true,
+      repeatMode: false
+    });
+    drawHandler.enable();
+  } catch(err) {
+    console.error('Draw polygon failed:', err);
+    alert('Kan tekenen niet starten: ' + err.message);
+    stopDrawing();
+  }
 }
 
 // ---------- DRAW BORING ----------
 function startDrawBoring() {
-  if (!MAP) return;
+  if (!MAP) { alert('Kaart nog niet geladen. Even wachten.'); return; }
+  if (typeof L.Draw === 'undefined' || !L.Draw.Marker) {
+    alert('Leaflet-draw is niet geladen. Vernieuw de pagina (Ctrl+F5).');
+    return;
+  }
   stopDrawing();
   drawMode = 'boring';
   document.getElementById('btn-draw-boring').classList.add('active');
   showHint('Plaats een <strong>boring</strong><br>Klik op de locatie waar de boring moet komen. <strong>Esc</strong> om te annuleren.');
 
-  drawHandler = new L.Draw.Marker(MAP, {
-    icon: L.divIcon({
-      className: 'boring-marker-icon',
-      html: '<div class="boring-marker"></div>',
-      iconSize: [20, 20], iconAnchor: [10, 10]
-    })
-  });
-  drawHandler.enable();
+  try {
+    drawHandler = new L.Draw.Marker(MAP, {
+      icon: L.divIcon({
+        className: 'boring-marker-icon',
+        html: '<div class="boring-marker"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      }),
+      repeatMode: false
+    });
+    drawHandler.enable();
+  } catch(err) {
+    console.error('Draw marker failed:', err);
+    alert('Kan boring plaatsen niet starten: ' + err.message);
+    stopDrawing();
+  }
 }
 
 function stopDrawing() {
-  if (drawHandler) { drawHandler.disable(); drawHandler = null; }
+  if (drawHandler) {
+    try { drawHandler.disable(); } catch(e) { console.warn('disable() failed:', e); }
+    drawHandler = null;
+  }
   document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
   hideHint();
   drawMode = null;
@@ -892,21 +939,33 @@ function stopDrawing() {
 
 // Listen for Leaflet-draw events after map init
 function bindDrawEvents() {
+  // Sanity check — Leaflet-draw must be loaded before we bind
+  if (typeof L.Draw === 'undefined' || typeof L.Draw.Event === 'undefined') {
+    console.warn('Leaflet-draw not yet loaded — retry in 300ms');
+    setTimeout(bindDrawEvents, 300);
+    return;
+  }
+
   MAP.on(L.Draw.Event.CREATED, e => {
     const layer = e.layer;
-    if (drawMode === 'proefsleuf') {
+    const currentMode = drawMode;  // capture before stopDrawing resets it
+    if (currentMode === 'proefsleuf') {
       handleProefsleufCreated(layer);
-    } else if (drawMode === 'boring') {
+    } else if (currentMode === 'boring') {
       handleBoringCreated(layer);
     }
+    // Reset button state but layer is already added to the right group
     stopDrawing();
   });
-  MAP.on(L.Draw.Event.DRAWSTOP, () => { stopDrawing(); });
 
-  // Escape to cancel
+  // Escape to cancel — gebruik event.type ipv key voor breedere browser-support
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && drawHandler) stopDrawing();
+    if ((e.key === 'Escape' || e.keyCode === 27) && drawHandler) {
+      stopDrawing();
+    }
   });
+
+  console.log('✓ Draw events bound successfully');
 }
 
 // ---------- PROEFSLEUF handling ----------
