@@ -1,0 +1,473 @@
+{
+  "version": "v10",
+  "generated": "2026-04-25",
+  "source": "IWR_Procesnavigator_TEMPLATE_v10_master.xlsm",
+  "projects": [
+    {
+      "id": "IRN24-0175",
+      "naam": "Maasstraat - Dordrecht",
+      "adres": "Maasstraat",
+      "stad": "Dordrecht",
+      "route": "Netgedreven",
+      "variant": "OidK",
+      "gsu_orig": "2027-01-18",
+      "gsu_verwacht": "2027-01-22",
+      "delta_wd": 4,
+      "n_items": 12,
+      "n_actiepunten": 2,
+      "n_showstoppers": 0,
+      "kritiek_item": "Bodemonderzoek CROW 400 — NG-OidK 2.O.8 (20wd) (185wd)",
+      "engineer": "Michael Bechoe",
+      "opdrachtgever": "Stedin (gas)",
+      "opmerkingen": "NG OidK · wk 2027-03 · In VO-fase, DO nog niet. Bodem ingediend 10-apr.",
+      "lat": 51.8133,
+      "lng": 4.6901,
+      "items": [
+        {
+          "type": "Warme overdracht engineering (OidK) — Netgedreven",
+          "eigenaar": "Netbeheerder",
+          "status": "Goedgekeurd",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "1900-01-01"
+        },
+        {
+          "type": "Natura 2000 oriëntatie / voortoets",
+          "eigenaar": "Michael Bechoe",
+          "status": "Ingediend",
+          "haalbaar": "JA",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-04"
+        },
+        {
+          "type": "Historisch bodemonderzoek",
+          "eigenaar": "Michael Bechoe",
+          "status": "Ingediend",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-09-24"
+        },
+        {
+          "type": "Bodemonderzoek CROW 400 — NG-OidK 2.O.8 (20wd)",
+          "eigenaar": "Aannemer",
+          "status": "Ingediend",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2027-01-22"
+        },
+        {
+          "type": "Onderzoeken tracé OidK — NG (75 wd, incl. schouw, CROW500, proefsleuven)",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-12-11"
+        },
+        {
+          "type": "VO goedgekeurd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-08-28"
+        },
+        {
+          "type": "DO getekend beide NB",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-08-07"
+        },
+        {
+          "type": "DO-dossier goedgekeurd — NG (15wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-08-28"
+        },
+        {
+          "type": "Boorplan",
+          "eigenaar": "Engineer",
+          "status": "Ingediend",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-09-24"
+        },
+        {
+          "type": "Begroting geclassificeerd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "TBG-materialen besteld",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "Werkmap + kick-off getekend",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-05"
+        }
+      ]
+    },
+    {
+      "id": "IRN24-0081",
+      "naam": "Rozensingel Fase 2",
+      "adres": "Rozensingel",
+      "stad": "Capelle a/d IJssel",
+      "route": "Netgedreven",
+      "variant": "NOidK",
+      "gsu_orig": "2026-08-24",
+      "gsu_verwacht": "2026-11-20",
+      "delta_wd": 64,
+      "n_items": 10,
+      "n_actiepunten": 5,
+      "n_showstoppers": 0,
+      "kritiek_item": "Proefsleuven en bijzondere activiteiten — NG (50 wd) (100wd)",
+      "engineer": "Jan Willem Meijer",
+      "opdrachtgever": "Stedin (gas)",
+      "opmerkingen": "NG NOidK · wk 2026-35 · In ontwerp/engineering. ⚠ VARIANT BEVESTIGEN: NOidK of OidK?",
+      "lat": 51.9225,
+      "lng": 4.5731,
+      "items": [
+        {
+          "type": "Bodemonderzoek CROW 400 — NG-NOidK (20wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-10-09"
+        },
+        {
+          "type": "Proefsleuven en bijzondere activiteiten — NG (50 wd)",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-11-20"
+        },
+        {
+          "type": "Quickscan bodem en tracé",
+          "eigenaar": "Engineer",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-25"
+        },
+        {
+          "type": "VO goedgekeurd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🔴",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-11"
+        },
+        {
+          "type": "DO getekend beide NB",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-08-07"
+        },
+        {
+          "type": "DO-dossier goedgekeurd — NG (15wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-08-28"
+        },
+        {
+          "type": "Zakelijk recht, ligvergunning, asset- en omgevingsvergunning (3.1.2)",
+          "eigenaar": "Grondzaken Stedin",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-07-24"
+        },
+        {
+          "type": "Begroting geclassificeerd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "TBG-materialen besteld",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "Werkmap + kick-off getekend",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-05"
+        }
+      ]
+    },
+    {
+      "id": "IRN24-0134",
+      "naam": "Honingerdijk",
+      "adres": "Honingerdijk",
+      "stad": "Rotterdam",
+      "route": "Netgedreven",
+      "variant": "NOidK",
+      "gsu_orig": "2026-08-31",
+      "gsu_verwacht": "2026-11-20",
+      "delta_wd": 59,
+      "n_items": 10,
+      "n_actiepunten": 5,
+      "n_showstoppers": 0,
+      "kritiek_item": "Proefsleuven en bijzondere activiteiten — NG (50 wd) (100wd)",
+      "engineer": "Naomi Athab",
+      "opdrachtgever": "Stedin (gas)",
+      "opmerkingen": "NG NOidK · wk 2026-36 · In engineering. ⚠ VARIANT BEVESTIGEN: NOidK of OidK?",
+      "lat": 51.9225,
+      "lng": 4.4792,
+      "items": [
+        {
+          "type": "Bodemonderzoek CROW 400 — KG-NOidK (10wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-25"
+        },
+        {
+          "type": "Proefsleuven en bijzondere activiteiten — NG (50 wd)",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-11-20"
+        },
+        {
+          "type": "Quickscan bodem en tracé",
+          "eigenaar": "Naomi Athab",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-25"
+        },
+        {
+          "type": "VO goedgekeurd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🔴",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-11"
+        },
+        {
+          "type": "DO getekend beide NB",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "ONBEKEND",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "1900-01-01"
+        },
+        {
+          "type": "DO-dossier goedgekeurd — NG (15wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-08-28"
+        },
+        {
+          "type": "Zakelijk recht, ligvergunning, asset- en omgevingsvergunning (3.1.2)",
+          "eigenaar": "Grondzaken Stedin",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-07-24"
+        },
+        {
+          "type": "Begroting geclassificeerd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "TBG-materialen besteld",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "Werkmap + kick-off getekend",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-05"
+        }
+      ]
+    },
+    {
+      "id": "IRN25-0031",
+      "naam": "Molenstraat Schenkel",
+      "adres": "Molenstraat Schenkel",
+      "stad": "Strijen",
+      "route": "Netgedreven",
+      "variant": "NOidK",
+      "gsu_orig": "2026-07-20",
+      "gsu_verwacht": "2026-11-20",
+      "delta_wd": 89,
+      "n_items": 10,
+      "n_actiepunten": 7,
+      "n_showstoppers": 0,
+      "kritiek_item": "Proefsleuven en bijzondere activiteiten — NG (50 wd) (100wd)",
+      "engineer": "Angelo Bhawanidien",
+      "opdrachtgever": "Stedin (gas/water)",
+      "opmerkingen": "NG NOidK · wk 2026-30 · 🔴 KRITIEK: slechts 13 weken tot GSU. ⚠ VARIANT BEVESTIGEN.",
+      "lat": 51.7476,
+      "lng": 4.5469,
+      "items": [
+        {
+          "type": "Bodemonderzoek CROW 400 — NG-NOidK (20wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-10-09"
+        },
+        {
+          "type": "Proefsleuven en bijzondere activiteiten — NG (50 wd)",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-11-20"
+        },
+        {
+          "type": "Quickscan bodem en tracé",
+          "eigenaar": "Engineer",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-25"
+        },
+        {
+          "type": "VO goedgekeurd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🔴",
+          "actiepunt": "True",
+          "impl_gsu": "2026-09-11"
+        },
+        {
+          "type": "DO getekend beide NB",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🔴",
+          "actiepunt": "True",
+          "impl_gsu": "2026-08-07"
+        },
+        {
+          "type": "DO-dossier goedgekeurd — NG (15wd)",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🔴",
+          "actiepunt": "True",
+          "impl_gsu": "2026-08-28"
+        },
+        {
+          "type": "Zakelijk recht, ligvergunning, asset- en omgevingsvergunning (3.1.2)",
+          "eigenaar": "Grondzaken Stedin",
+          "status": "Nodig",
+          "haalbaar": "KRAP",
+          "stoplicht": "🟠",
+          "actiepunt": "True",
+          "impl_gsu": "2026-07-24"
+        },
+        {
+          "type": "Begroting geclassificeerd",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "TBG-materialen besteld",
+          "eigenaar": "Netbeheerder",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-19"
+        },
+        {
+          "type": "Werkmap + kick-off getekend",
+          "eigenaar": "Aannemer",
+          "status": "Nodig",
+          "haalbaar": "JA",
+          "stoplicht": "🟢",
+          "actiepunt": "",
+          "impl_gsu": "2026-06-05"
+        }
+      ]
+    }
+  ]
+}
